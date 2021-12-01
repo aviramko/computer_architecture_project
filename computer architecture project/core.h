@@ -46,6 +46,7 @@ typedef enum opcodes {
 } opcodes;
 
 typedef struct instruction {
+	int PC;
 	int opcode;		// bits 31:24
 	int rd;			// bits 23:20
 	int rs;			// bits 19:16
@@ -62,7 +63,6 @@ typedef struct core {
 	int core_registers[NUM_OF_REGS];
 	int core_imem_length;
 	int clock_cycle;
-	//int PC;
 } core;
 
 

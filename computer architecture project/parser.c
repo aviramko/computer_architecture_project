@@ -32,6 +32,7 @@ void parse_line_to_mem(core *core, char *line_buffer, int imem_index)
 	core->core_imem[imem_index].rd = (instruction_value & (0xF << 20)) >> 20;
 	core->core_imem[imem_index].opcode = (instruction_value & (0xFF << 24)) >> 24;
 
+	core->core_imem[imem_index].PC = imem_index;
 }
 
 void parse_imem_file(core *core, char *imem_filename)
