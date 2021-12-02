@@ -1,8 +1,11 @@
 #ifndef CORE_HEADER
 #define CORE_HEADER
 
+#include <stdbool.h>
+
 #define NUM_OF_REGS 16
 #define MAX_IMEM_LINES 1024
+#define PIPELINE_BUFFERS_NUM 4
 
 typedef enum reg {
 	R0,
@@ -45,6 +48,22 @@ typedef enum opcodes {
 	halt	= 20
 } opcodes;
 
+//typedef enum ePIPELINE_STAGES {
+//	FETCH = 0,
+//	DECODE = 1,
+//	EXECUTE = 2,
+//	MEMORY = 3,
+//	WRITE_BACK = 4,
+//	EMPTY = 5
+//} ePIPELINE_STAGES;
+
+typedef enum ePIPIELINE_BUFFERS {
+	IF_ID = 0,
+	ID_EX = 1,
+	EX_MEM = 2,
+	MEM_WB = 3
+} ePIPIELINE_BUFFERS;
+
 typedef struct instruction {
 	int PC;
 	int opcode;		// bits 31:24
@@ -54,18 +73,30 @@ typedef struct instruction {
 	int immediate;	// bits 11:0
 } instruction;
 
-//typedef struct pipeline {
-//	
-//} pipeline;
+typedef struct pipeline_stage {
+	instruction current_instruction;
+	instruction new_instruction;
+	bool valid;
+	bool stalled;
+	int current_ALU_output;
+	int new_ALU_output;
+	bool halt;
+} pipeline_stage;
 
 typedef struct core {
 	instruction core_imem[MAX_IMEM_LINES];
 	int core_registers[NUM_OF_REGS];
+	int current_core_registers[NUM_OF_REGS];
 	int core_imem_length;
-	int clock_cycle;
+	int clock_cycle_count;
+	int next_PC;
+	int fetch_old_PC;
+	pipeline_stage core_pipeline[PIPELINE_BUFFERS_NUM];
+	bool core_halt;
 } core;
 
 
 void initialize_core(core *core, char *imem_filename);
+void simulate_core(core *core, FILE *trace_file);
 
 #endif // !CORE_HEADER

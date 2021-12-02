@@ -26,11 +26,16 @@ void parse_line_to_mem(core *core, char *line_buffer, int imem_index)
 	remove_spaces(line_buffer);							// remove all spaces before parsing
 	int instruction_value = strtol(line_buffer, NULL, 16);
 
-	core->core_imem[imem_index].immediate = instruction_value & 0xFFF;
-	core->core_imem[imem_index].rt = (instruction_value & (0xF << 12)) >> 12;
-	core->core_imem[imem_index].rs = (instruction_value & (0xF << 16)) >> 16;
-	core->core_imem[imem_index].rd = (instruction_value & (0xF << 20)) >> 20;
 	core->core_imem[imem_index].opcode = (instruction_value & (0xFF << 24)) >> 24;
+	core->core_imem[imem_index].rd = (instruction_value & (0xF << 20)) >> 20;
+	core->core_imem[imem_index].rs = (instruction_value & (0xF << 16)) >> 16;
+	core->core_imem[imem_index].rt = (instruction_value & (0xF << 12)) >> 12;
+	core->core_imem[imem_index].immediate = instruction_value & 0xFFF;
+	
+	//if (core->core_imem[imem_index].rt == 0x1)
+	//{
+	//	core->core_imem[imem_index].rt = core->core_imem[imem_index].immediate;
+	//}
 
 	core->core_imem[imem_index].PC = imem_index;
 }
