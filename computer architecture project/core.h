@@ -94,10 +94,11 @@ typedef struct core {
 	pipeline_stage core_pipeline[PIPELINE_BUFFERS_NUM];
 	bool hazard;
 	bool core_halt;
+	bool halt_PC;
 } core;
 
 
 void initialize_core(core *core, char *imem_filename);
-void simulate_core(core *core, FILE *trace_file);
+void simulate_clock_cycle(core *core, FILE *trace_file);
 
 #endif // !CORE_HEADER

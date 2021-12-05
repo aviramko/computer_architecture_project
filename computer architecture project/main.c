@@ -14,9 +14,13 @@ int main(int argc, char *argv[])
 {
 	core core0;// *core1 = NULL, *core2 = NULL, *core3 = NULL;
 	
-	initialize_core(&core0, argv[2]);
-	FILE *fp_core0trace = fopen(argv[12], "w");
-	simulate_core(&core0, fp_core0trace);
+	initialize_core(&core0, argv[1]);
+	FILE *fp_core0trace = fopen(argv[11], "w");
+	while (!core0.core_halt)
+	{
+		simulate_clock_cycle(&core0, fp_core0trace);
+	}
+	//simulate_core(&core0, fp_core0trace);
 	fclose(fp_core0trace);
 
 	return 0;
