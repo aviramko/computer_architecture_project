@@ -1,3 +1,2 @@
-﻿  core.c
-C:\Users\avira\source\repos\comp_arc_proj\computer architecture project\core.c(57): warning C4715: 'check_stage_validity': not all control paths return a value
+﻿  main.c
   computer architecture project.vcxproj -> C:\Users\avira\source\repos\comp_arc_proj\Debug\computer architecture project.exe

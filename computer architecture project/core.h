@@ -71,13 +71,13 @@ typedef struct instruction {
 	int rs;			// bits 19:16
 	int rt;			// bits 15:12
 	int immediate;	// bits 11:0
+	bool stalled;	
 } instruction;
 
 typedef struct pipeline_stage {
 	instruction current_instruction;
 	instruction new_instruction;
 	bool valid;
-	bool stalled;
 	int current_ALU_output;
 	int new_ALU_output;
 	bool halt;
@@ -92,6 +92,7 @@ typedef struct core {
 	int next_PC;
 	int fetch_old_PC;
 	pipeline_stage core_pipeline[PIPELINE_BUFFERS_NUM];
+	bool hazard;
 	bool core_halt;
 } core;
 

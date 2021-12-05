@@ -38,6 +38,7 @@ void parse_line_to_mem(core *core, char *line_buffer, int imem_index)
 	//}
 
 	core->core_imem[imem_index].PC = imem_index;
+	core->core_imem[imem_index].stalled = false;
 }
 
 void parse_imem_file(core *core, char *imem_filename)

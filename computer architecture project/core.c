@@ -7,7 +7,8 @@
 #include "core.h"
 #include "parser.h"
 
-#define TRACE_FILE_LINE_LEN 152
+#define TRACE_FILE_LINE_LEN 200	// more than enough
+#define STAGE_FORMAT 4
 
 void initialize_core_regs(core *core)
 {
@@ -27,7 +28,8 @@ void initialize_core_pipeline(core *core)
 		core->core_pipeline[i].current_ALU_output = 0;
 		core->core_pipeline[i].new_ALU_output = 0;
 		core->core_pipeline[i].halt = false;
-		core->core_pipeline[i].stalled = false;
+		core->core_pipeline[i].current_instruction.stalled = false;
+		core->core_pipeline[i].new_instruction.stalled = false;
 	}
 }
 
@@ -39,6 +41,7 @@ void initialize_core(core *core, char *imem_filename)
 	core->next_PC = 0;
 	core->clock_cycle_count = 0;
 	core->core_halt = false;
+	core->hazard = false;
 }
 
 bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
@@ -56,8 +59,94 @@ bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 		return false;
 }
 
+bool check_stalls(core *core)
+{
+	for (int i = 0; i < PIPELINE_BUFFERS_NUM; i++)
+	{
+		bool stalled = core->core_pipeline[i].current_instruction.stalled;
+		if (stalled)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void check_hazards(core *core)
+{
+	//bool ID_EX_stall = core->core_pipeline[ID_EX].current_instruction.stalled;
+	//bool IF_ID_stall = core->core_pipeline[IF_ID].current_instruction.stalled;
+
+	//if (core->core_pipeline[MEM_WB].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rs
+	//	&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled)
+	//{
+	//	//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+	//	core->hazard = true;
+	//}
+	//
+	//if (core->core_pipeline[MEM_WB].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rt
+	//	&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled)
+	//{
+	//	//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+	//	core->hazard = true;
+	//}
+
+	if (core->core_pipeline[EX_MEM].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rs
+		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled)
+	{
+		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+		core->hazard = true;
+	}
+
+	if (core->core_pipeline[EX_MEM].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rt
+		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled)
+	{
+		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+		core->hazard = true;
+	}
+
+	if (core->core_pipeline[EX_MEM].current_instruction.rd == core->core_pipeline[IF_ID].current_instruction.rt
+		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled)
+	{
+		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+		core->hazard = true;
+	}
+	
+	if (core->core_pipeline[EX_MEM].current_instruction.rd == core->core_pipeline[IF_ID].current_instruction.rs
+		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled)
+	{
+		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+		core->hazard = true;
+	}
+
+	if (core->core_pipeline[MEM_WB].current_instruction.rd == core->core_pipeline[IF_ID].current_instruction.rs
+		&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled)
+	{
+		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+		core->hazard = true;
+	}
+	
+	if (core->core_pipeline[MEM_WB].current_instruction.rd == core->core_pipeline[IF_ID].current_instruction.rt
+		&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled)
+	{
+		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
+		core->hazard = true;
+	}
+}
+
 void fetch(core *core)
 {
+	//bool stalled = check_stalls(core);
+	//bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
+	//if (stalled)
+	//{
+	//	return;
+	//}
+	//if (core->hazard)
+	//{
+	//	return;	// stop injecting new instructions to PC
+	//}
+
 	core->fetch_old_PC = core->next_PC;		// save fetch stage old PC before it's altered, for trace purposes
 	core->core_pipeline[IF_ID].new_instruction = core->core_imem[core->next_PC];
 	core->next_PC += 1;		// take old PC, given there is no branch taken at this cycle. If branch is taken, next_PC is updated in decode stage
@@ -120,21 +209,61 @@ void check_branch(core *core)
 void decode(core *core)
 {
 	bool valid_stage = check_stage_validity(core, IF_ID);
+	//bool stalled = check_stalls(core);
+	//bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
+	//if (!valid_stage || stalled)
+	//{
+	//	if (stalled)
+	//	{
+	//		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[IF_ID].current_instruction;
+	//	}
+	//	return;
+	//}
+	
 	if (!valid_stage)
 	{
 		return;
 	}
 
-	check_branch(core);
+	check_hazards(core);
+	if (core->hazard)
+	{
+		core->next_PC -= 1;		// not sure if need to add old PC if after branch
+		core->core_pipeline[IF_ID].new_instruction = core->core_pipeline[IF_ID].current_instruction;
+		//core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[IF_ID].current_instruction;
+		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[ID_EX].current_instruction;
+		core->core_pipeline[ID_EX].new_instruction.stalled = true;
+	}
+	else
+	{
+		check_branch(core);
+		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[IF_ID].current_instruction;
+	}
 
-	core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[IF_ID].current_instruction;
 }
 
 void execute(core *core)
 {
 	bool valid_stage = check_stage_validity(core, ID_EX);
+	//bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
+	//bool stalled = check_stalls(core);
+	//if (!valid_stage || stalled)
+	//{
+	//	if (stalled)
+	//	{
+	//		core->core_pipeline[EX_MEM].new_instruction = core->core_pipeline[ID_EX].current_instruction;
+	//	}
+	//	return;
+	//}
 	if (!valid_stage)
 	{
+		return;
+	}
+
+	bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
+	if (stalled)
+	{
+		core->core_pipeline[EX_MEM].new_instruction = core->core_pipeline[ID_EX].current_instruction;
 		return;
 	}
 
@@ -144,7 +273,7 @@ void execute(core *core)
 
 	if (core->core_pipeline[ID_EX].current_instruction.opcode == halt)
 	{
-		core->core_pipeline[IF_ID].stalled = true;
+		core->core_pipeline[IF_ID].current_instruction.stalled = true;
 		core->core_pipeline[IF_ID].halt = true;
 	}
 
@@ -209,14 +338,28 @@ void execute(core *core)
 void memory(core *core)
 {
 	bool valid_stage = check_stage_validity(core, EX_MEM);
+	bool stalled = core->core_pipeline[EX_MEM].current_instruction.stalled;
+	//if (!valid_stage || stalled)
+	//{
+	//	if (stalled)
+	//	{
+	//		core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
+	//	}
+	//	return;
+	//}
 	if (!valid_stage)
 	{
+		return;
+	}
+	if (stalled)
+	{
+		core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
 		return;
 	}
 
 	if (core->core_pipeline[EX_MEM].current_instruction.opcode == halt)
 	{
-		core->core_pipeline[ID_EX].stalled = true;
+		core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->core_pipeline[ID_EX].halt = true;
 	}
 
@@ -227,14 +370,24 @@ void memory(core *core)
 void write_back(core *core)
 {
 	bool valid_stage = check_stage_validity(core, MEM_WB);
+	bool stalled = core->core_pipeline[MEM_WB].current_instruction.stalled;
+	//if (!valid_stage || stalled)
+	//{
+	//	return;
+	//}
 	if (!valid_stage)
+	{
+		return;
+	}
+
+	if (stalled)
 	{
 		return;
 	}
 
 	if (core->core_pipeline[MEM_WB].current_instruction.opcode == halt)
 	{
-		core->core_pipeline[EX_MEM].stalled = true;
+		core->core_pipeline[EX_MEM].current_instruction.stalled = true;
 		core->core_pipeline[EX_MEM].halt = true;
 		core->core_halt = true;
 		return;
@@ -257,6 +410,12 @@ void write_back(core *core)
 void update_stage_buffers(core *core)
 {
 	// update instructions
+	//bool stalled = check_stalls(core);
+	bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
+	//if (!stalled)
+	//{
+	//	core->core_pipeline[IF_ID].current_instruction = core->core_pipeline[IF_ID].new_instruction;
+	//}
 	core->core_pipeline[IF_ID].current_instruction = core->core_pipeline[IF_ID].new_instruction;
 	core->core_pipeline[ID_EX].current_instruction = core->core_pipeline[ID_EX].new_instruction;
 	core->core_pipeline[EX_MEM].current_instruction = core->core_pipeline[EX_MEM].new_instruction;
@@ -267,76 +426,42 @@ void update_stage_buffers(core *core)
 	core->core_pipeline[MEM_WB].current_ALU_output = core->core_pipeline[MEM_WB].new_ALU_output;
 }
 
+void format_stage_trace(bool valid, bool stalled, char *str, int num)
+{
+	if (!valid || stalled)
+	{
+		sprintf(str, "---");
+	}
+	else
+	{
+		sprintf(str, "%03X", num);
+	}
+}
+
 void write_trace(core *core, FILE *trace_file)
 {
 	char str[TRACE_FILE_LINE_LEN];
 	int clock_count = core->clock_cycle_count;
 
-	bool valid_stage = core->core_pipeline[IF_ID].valid;
-	bool stalled_stage = core->core_pipeline[IF_ID].stalled;
-	char fetch[4];
-	if (stalled_stage)
-	{
-		sprintf(fetch, "---");
-	}
-	else
-	{
-		sprintf(fetch, "%03X", core->fetch_old_PC);
-	}
+	pipeline_stage *core_pipeline = core->core_pipeline;
+	char fetch[STAGE_FORMAT];
+	char decode[STAGE_FORMAT];
+	char execute[STAGE_FORMAT];
+	char memory[STAGE_FORMAT];
+	char write_back[STAGE_FORMAT];
 
-	valid_stage = core->core_pipeline[IF_ID].valid;
-	stalled_stage = core->core_pipeline[IF_ID].stalled;
-	char decode[4];
-	if (stalled_stage || !valid_stage)
-	{
-		sprintf(decode, "---");
-	}
-	else
-	{
-		sprintf(decode, "%03X", core->core_pipeline[IF_ID].current_instruction.PC);
-	}
-
-	valid_stage = core->core_pipeline[ID_EX].valid;
-	stalled_stage = core->core_pipeline[ID_EX].stalled;
-	char execute[4];
-	if (stalled_stage || !valid_stage)
-	{
-		sprintf(execute, "---");
-	}
-	else
-	{
-		sprintf(execute, "%03X", core->core_pipeline[ID_EX].current_instruction.PC);
-	}
-
-	valid_stage = core->core_pipeline[EX_MEM].valid;
-	stalled_stage = core->core_pipeline[EX_MEM].stalled;
-	char memory[4];
-	if (stalled_stage || !valid_stage)
-	{
-		sprintf(memory, "---");
-	}
-	else
-	{
-		sprintf(memory, "%03X", core->core_pipeline[EX_MEM].current_instruction.PC);
-	}
-
-	valid_stage = core->core_pipeline[MEM_WB].valid;
-	stalled_stage = core->core_pipeline[MEM_WB].stalled;
-	char write_back[4];
-	if (stalled_stage || !valid_stage)
-	{
-		sprintf(write_back, "---");
-	}
-	else
-	{
-		sprintf(write_back, "%03X", core->core_pipeline[MEM_WB].current_instruction.PC);
-	}
+	format_stage_trace(true, core_pipeline[IF_ID].current_instruction.stalled, &fetch, core->fetch_old_PC);
+	format_stage_trace(core_pipeline[IF_ID].valid, core_pipeline[IF_ID].current_instruction.stalled, &decode, core_pipeline[IF_ID].current_instruction.PC);
+	format_stage_trace(core_pipeline[ID_EX].valid, core_pipeline[ID_EX].current_instruction.stalled, &execute, core_pipeline[ID_EX].current_instruction.PC);
+	format_stage_trace(core_pipeline[EX_MEM].valid, core_pipeline[EX_MEM].current_instruction.stalled, &memory, core_pipeline[EX_MEM].current_instruction.PC);
+	format_stage_trace(core_pipeline[MEM_WB].valid, core_pipeline[MEM_WB].current_instruction.stalled, &write_back, core_pipeline[MEM_WB].current_instruction.PC);
 
 	int *regs = core->current_core_registers;
 
 	sprintf(str,"%d %s %s %s %s %s %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X \n",
 			clock_count, fetch, decode, execute, memory, write_back, regs[R2], regs[R3], regs[R4], regs[R5],
 			regs[R6], regs[R7], regs[R8], regs[R9], regs[R10], regs[R11], regs[R12], regs[R13], regs[R14], regs[R15]);
+
 	fputs(str, trace_file);
 }
 
@@ -348,9 +473,18 @@ void copy_regs(core *core)
 	}
 }
 
+void clear_stall_flags(core *core)
+{
+	for (int i = 0; i < PIPELINE_BUFFERS_NUM; i++)
+	{
+		core->core_pipeline[i].current_instruction.stalled = false;
+	}
+}
+
 void clock_cycle(core *core, FILE *trace_file)
 {
-	copy_regs(core);			// snapshot core regs at the beginning of the clock cycle
+	copy_regs(core);				// snapshot core regs at the beginning of the clock cycle
+	//check_hazards(core);			// check clock cycle hazards
 	fetch(core);
 	decode(core);
 	execute(core);
@@ -358,7 +492,10 @@ void clock_cycle(core *core, FILE *trace_file)
 	write_back(core);
 	write_trace(core, trace_file);
 	update_stage_buffers(core);
+	//clear_stall_flags(core);
 	core->clock_cycle_count++;
+	core->hazard = false;
+	//core->core_pipeline[ID_EX].current_instruction.stalled = false;
 }
 
 void simulate_core(core *core, FILE *trace_file)
