@@ -16,11 +16,12 @@ int main(int argc, char *argv[])
 	
 	initialize_core(&core0, argv[1]);
 	FILE *fp_core0trace = fopen(argv[11], "w");
+
 	while (!core0.core_halt)
 	{
 		simulate_clock_cycle(&core0, fp_core0trace);
 	}
-	//simulate_core(&core0, fp_core0trace);
+
 	fclose(fp_core0trace);
 
 	return 0;

@@ -62,23 +62,6 @@ bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 
 void check_hazards(core *core)
 {
-	//bool ID_EX_stall = core->core_pipeline[ID_EX].current_instruction.stalled;
-	//bool IF_ID_stall = core->core_pipeline[IF_ID].current_instruction.stalled;
-
-	//if (core->core_pipeline[MEM_WB].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rs
-	//	&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled)
-	//{
-	//	//core->core_pipeline[ID_EX].current_instruction.stalled = true;
-	//	core->hazard = true;
-	//}
-	//
-	//if (core->core_pipeline[MEM_WB].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rt
-	//	&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled)
-	//{
-	//	//core->core_pipeline[ID_EX].current_instruction.stalled = true;
-	//	core->hazard = true;
-	//}
-
 	if ((core->core_pipeline[EX_MEM].current_instruction.rd == R0 && core->core_pipeline[ID_EX].current_instruction.rs == R0)
 		|| (core->core_pipeline[EX_MEM].current_instruction.rd == R0 && core->core_pipeline[ID_EX].current_instruction.rt == R0)
 		|| (core->core_pipeline[EX_MEM].current_instruction.rd == R0 && core->core_pipeline[IF_ID].current_instruction.rs == R0)
@@ -90,7 +73,6 @@ void check_hazards(core *core)
 		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
 		&& !core->core_pipeline[ID_EX].halt)
 	{
-		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->hazard = true;
 	}
 
@@ -98,7 +80,6 @@ void check_hazards(core *core)
 		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
 		&& !core->core_pipeline[ID_EX].halt)
 	{
-		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->hazard = true;
 	}
 
@@ -106,7 +87,6 @@ void check_hazards(core *core)
 		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
 		&& !core->core_pipeline[IF_ID].halt)
 	{
-		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->hazard = true;
 	}
 	
@@ -114,7 +94,6 @@ void check_hazards(core *core)
 		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
 		&& !core->core_pipeline[IF_ID].halt)
 	{
-		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->hazard = true;
 	}
 
@@ -122,7 +101,6 @@ void check_hazards(core *core)
 		&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled
 		&& !core->core_pipeline[IF_ID].halt)
 	{
-		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->hazard = true;
 	}
 	
@@ -130,28 +108,12 @@ void check_hazards(core *core)
 		&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled
 		&& !core->core_pipeline[IF_ID].halt)
 	{
-		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->hazard = true;
 	}
 }
 
 void fetch(core *core)
 {
-	//bool stalled = check_stalls(core);
-	//bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
-	//if (stalled)
-	//{
-	//	return;
-	//}
-	//if (core->hazard)
-	//{
-	//	return;	// stop injecting new instructions to PC
-	//}
-
-	//if (core->halt_PC)
-	//{
-	//	return;
-	//}
 	core->fetch_old_PC = core->next_PC;		// save fetch stage old PC before it's altered, for trace purposes
 	core->core_pipeline[IF_ID].new_instruction = core->core_imem[core->next_PC];
 	core->next_PC += 1;		// take old PC, given there is no branch taken at this cycle. If branch is taken, next_PC is updated in decode stage
@@ -161,6 +123,7 @@ void check_branch(core *core)
 {
 	instruction current_instruction = core->core_pipeline[IF_ID].current_instruction;
 	int opcode = current_instruction.opcode;
+
 	if ((opcode < beq) || (opcode > bge))
 	{
 		return;
@@ -214,30 +177,17 @@ void check_branch(core *core)
 void decode(core *core)
 {
 	bool valid_stage = check_stage_validity(core, IF_ID);
-	//bool stalled = check_stalls(core);
-	//bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
-	//if (!valid_stage || stalled)
-	//{
-	//	if (stalled)
-	//	{
-	//		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[IF_ID].current_instruction;
-	//	}
-	//	return;
-	//}
 	
 	if (!valid_stage)
 	{
 		return;
 	}
 
-	//if (core->core_pipeline[I]
-
 	check_hazards(core);
 	if (core->hazard)
 	{
 		core->next_PC -= 1;		// not sure if need to add old PC if after branch
 		core->core_pipeline[IF_ID].new_instruction = core->core_pipeline[IF_ID].current_instruction;
-		//core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[IF_ID].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[ID_EX].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction.stalled = true;
 		
@@ -247,34 +197,12 @@ void decode(core *core)
 		check_branch(core);
 		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[IF_ID].current_instruction;
 	}
-
-	//if (core->core_pipeline[IF_ID].current_instruction.opcode == halt)
-	//{
-	//	core->core_pipeline[IF_ID].halt = true;
-	//}
-
-	//if (core->core_pipeline[ID_EX].current_instruction.opcode == halt)
-	//{
-	//	//core->core_pipeline[IF_ID].current_instruction.stalled = true;
-	//	core->core_pipeline[IF_ID].halt = true;
-	//	//core->halt_PC = true;
-	//}
-
 }
 
 void execute(core *core)
 {
 	bool valid_stage = check_stage_validity(core, ID_EX);
-	//bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
-	//bool stalled = check_stalls(core);
-	//if (!valid_stage || stalled)
-	//{
-	//	if (stalled)
-	//	{
-	//		core->core_pipeline[EX_MEM].new_instruction = core->core_pipeline[ID_EX].current_instruction;
-	//	}
-	//	return;
-	//}
+	
 	if (!valid_stage)
 	{
 		return;
@@ -282,9 +210,7 @@ void execute(core *core)
 
 	if (core->core_pipeline[ID_EX].current_instruction.opcode == halt)
 	{
-		//core->core_pipeline[IF_ID].current_instruction.stalled = true;
 		core->core_pipeline[IF_ID].halt = true;
-		//core->halt_PC = true;
 	}
 
 	bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
@@ -332,17 +258,11 @@ void execute(core *core)
 		ALU_output = (int)((unsigned int)rs_value >> rt_value);
 		break;
 	case (beq):
-		break;
 	case (bne):
-		break;
 	case (blt):
-		break;
 	case (bgt):
-		break;
 	case (ble):
-		break;
 	case (bge):
-		break;
 	case (jal):
 		break;
 	case (lw):
@@ -361,14 +281,7 @@ void memory(core *core)
 {
 	bool valid_stage = check_stage_validity(core, EX_MEM);
 	bool stalled = core->core_pipeline[EX_MEM].current_instruction.stalled;
-	//if (!valid_stage || stalled)
-	//{
-	//	if (stalled)
-	//	{
-	//		core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
-	//	}
-	//	return;
-	//}
+
 	if (!valid_stage)
 	{
 		return;
@@ -376,7 +289,6 @@ void memory(core *core)
 
 	if (core->core_pipeline[EX_MEM].current_instruction.opcode == halt)
 	{
-		//core->core_pipeline[ID_EX].current_instruction.stalled = true;
 		core->core_pipeline[ID_EX].halt = true;
 	}
 
@@ -394,10 +306,7 @@ void write_back(core *core)
 {
 	bool valid_stage = check_stage_validity(core, MEM_WB);
 	bool stalled = core->core_pipeline[MEM_WB].current_instruction.stalled;
-	//if (!valid_stage || stalled)
-	//{
-	//	return;
-	//}
+
 	if (!valid_stage)
 	{
 		return;
@@ -405,7 +314,6 @@ void write_back(core *core)
 
 	if (core->core_pipeline[MEM_WB].current_instruction.opcode == halt)
 	{
-		//core->core_pipeline[EX_MEM].current_instruction.stalled = true;
 		core->core_pipeline[EX_MEM].halt = true;
 		core->core_halt = true;
 		return;
@@ -433,12 +341,6 @@ void write_back(core *core)
 void update_stage_buffers(core *core)
 {
 	// update instructions
-	//bool stalled = check_stalls(core);
-	bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
-	//if (!stalled)
-	//{
-	//	core->core_pipeline[IF_ID].current_instruction = core->core_pipeline[IF_ID].new_instruction;
-	//}
 	core->core_pipeline[IF_ID].current_instruction = core->core_pipeline[IF_ID].new_instruction;
 	core->core_pipeline[ID_EX].current_instruction = core->core_pipeline[ID_EX].new_instruction;
 	core->core_pipeline[EX_MEM].current_instruction = core->core_pipeline[EX_MEM].new_instruction;
@@ -496,14 +398,6 @@ void copy_regs(core *core)
 	}
 }
 
-void clear_stall_flags(core *core)
-{
-	for (int i = 0; i < PIPELINE_BUFFERS_NUM; i++)
-	{
-		core->core_pipeline[i].current_instruction.stalled = false;
-	}
-}
-
 void simulate_clock_cycle(core *core, FILE *trace_file)
 {
 	copy_regs(core);				// snapshot core regs at the beginning of the clock cycle
@@ -515,18 +409,6 @@ void simulate_clock_cycle(core *core, FILE *trace_file)
 	write_back(core);
 	write_trace(core, trace_file);
 	update_stage_buffers(core);
-	//clear_stall_flags(core);
 	core->clock_cycle_count++;
-	//if (core->clock_cycle_count == 700) 
-	//	core->hazard=false;
 	core->hazard = false;
-	//core->core_pipeline[ID_EX].current_instruction.stalled = false;
 }
-
-//void simulate_core(core *core, FILE *trace_file)
-//{
-//	while (!core->core_halt)
-//	{
-//		clock_cycle(core,trace_file);
-//	}
-//}

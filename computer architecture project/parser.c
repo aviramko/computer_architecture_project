@@ -31,11 +31,6 @@ void parse_line_to_mem(core *core, char *line_buffer, int imem_index)
 	core->core_imem[imem_index].rs = (instruction_value & (0xF << 16)) >> 16;
 	core->core_imem[imem_index].rt = (instruction_value & (0xF << 12)) >> 12;
 	core->core_imem[imem_index].immediate = instruction_value & 0xFFF;
-	
-	//if (core->core_imem[imem_index].rt == 0x1)
-	//{
-	//	core->core_imem[imem_index].rt = core->core_imem[imem_index].immediate;
-	//}
 
 	core->core_imem[imem_index].PC = imem_index;
 	core->core_imem[imem_index].stalled = false;
