@@ -10,16 +10,16 @@
 
 void remove_spaces(char* s) {
 	char* d = s;
-	do 
+	do
 	{
-		while (*d == ' ' || *d == '\t' || *d == '\r') 
+		while (*d == ' ' || *d == '\t' || *d == '\r')
 		{
 			++d;
 		}
 	} while (*s++ = *d++);
 }
 
-void parse_line_to_mem(core *core, char *line_buffer, int imem_index)
+void parse_line_to_mem(core* core, char* line_buffer, int imem_index)
 {
 
 	line_buffer[strcspn(line_buffer, "\n")] = '\0';		// replace end-of-line char with end-of-string char
@@ -36,9 +36,9 @@ void parse_line_to_mem(core *core, char *line_buffer, int imem_index)
 	core->core_imem[imem_index].stalled = false;
 }
 
-void parse_imem_file(core *core, char *imem_filename)
+void parse_imem_file(core* core, char* imem_filename)
 {
-	FILE *ptr_imem_file = fopen(imem_filename, "r");
+	FILE* ptr_imem_file = fopen(imem_filename, "r");
 	int imem_iterator = 0;
 	char line_buffer[MAX_IMEM_LINE_WIDTH];
 
@@ -54,4 +54,5 @@ void parse_imem_file(core *core, char *imem_filename)
 
 	fclose(ptr_imem_file);
 }
+
 
