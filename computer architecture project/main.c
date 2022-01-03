@@ -10,12 +10,12 @@
 
 #include "core.h"
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
 	core core0;// *core1 = NULL, *core2 = NULL, *core3 = NULL;
-	
+
 	initialize_core(&core0, argv[1]);
-	FILE *fp_core0trace = fopen(argv[11], "w");
+	FILE* fp_core0trace = fopen(argv[11], "w");
 
 	while (!core0.core_halt)
 	{

@@ -7,6 +7,31 @@
 #define MAX_IMEM_LINES 1024
 #define PIPELINE_BUFFERS_NUM 4
 
+#define NO_VALUE_CODE -1
+#define UNVALID_REQUEST_CODE 0 // yuval
+#define VALID_REQUEST_CODE 1 // yuval
+
+#define CORES_NUM 4
+#define EMPTY_DATA_FIELD 0
+#define BUS_FLUSH_CODE 3
+#define IMEM_LINES_NUM 1024
+#define MAIN_MEM_SIZE 1048576 // 2^20
+
+// Bus Codes
+#define BUS_NO_CMD_CODE 0
+#define BUS_RD_CODE 1
+#define BUS_RDX_CODE 2
+#define BUS_FLUSH_CODE 3
+
+#define NO_BUS_REQUEST_CODE 0
+#define PENDING_SEND_CODE 1
+#define WAITING_FLUSH_CODE 2
+#define PENDING_WB_SEND_CODE 3
+#define WB_COMPLETED_CODE 4
+
+// Core Codes
+#define MEMORY_ORIGIN_CODE 4
+
 typedef enum reg {
 	R0,
 	R1,
@@ -83,8 +108,45 @@ typedef struct pipeline_stage {
 	bool halt;
 } pipeline_stage;
 
+////////////////////// yuval
+
+typedef struct statistics
+{
+	int cycles;
+	int instructions;
+	int read_hit;
+	int write_hit;
+	int read_miss;
+	int write_miss;
+	int decode_stall;
+	int mem_stall;
+
+} statistics;
+
+typedef struct memory_address
+{
+	unsigned int index : 8;
+	unsigned int tag : 12;
+
+} address;
+
+typedef struct MSI_bus
+{
+	unsigned int bus_shared : 1;
+	unsigned int bus_data : 32;
+	address bus_addr;
+	unsigned int bus_cmd : 2;
+	unsigned int bus_origid : 3;
+
+} msi_bus;
+
+//////////////////////////////////////
+
 typedef struct core {
 	instruction core_imem[MAX_IMEM_LINES];
+	statistics stat; // yuval
+	msi_bus bus_request; // yuval
+	int bus_request_status; // yuval
 	int core_registers[NUM_OF_REGS];
 	int current_core_registers[NUM_OF_REGS];
 	int core_imem_length;
@@ -96,6 +158,7 @@ typedef struct core {
 	bool core_halt;
 	bool halt_PC;
 } core;
+
 
 
 void initialize_core(core *core, char *imem_filename);

@@ -6,9 +6,82 @@
 
 #include "core.h"
 #include "parser.h"
+#include "utils.h"
 
 #define TRACE_FILE_LINE_LEN 200	// more than enough
 #define STAGE_FORMAT 4
+
+//////////////////////// yuval
+
+int valid_request;
+int memory_request_cycle; // change to multiple cores
+int main_mem[MAIN_MEM_SIZE];
+msi_bus empty_request;
+msi_bus bus;
+
+void initialize_core_statistics(core* core)
+{
+	// for(int i = 0; i< CORES_NUM; i++){
+
+	core->stat.cycles = 1;
+	core->stat.instructions = 0;
+	core->stat.read_hit = 0;
+	core->stat.write_hit = 0;
+	core->stat.read_miss = 0;
+	core->stat.write_miss = 0;
+	core->stat.decode_stall = 0;
+	core->stat.mem_stall = 0;
+	//}
+}
+
+void initialize_bus(core* core) // TODO use
+{
+	bus.bus_addr.index = EMPTY_DATA_FIELD;
+	bus.bus_addr.tag = EMPTY_DATA_FIELD;
+	bus.bus_cmd = EMPTY_DATA_FIELD;
+	bus.bus_data = EMPTY_DATA_FIELD;
+	bus.bus_origid = EMPTY_DATA_FIELD;
+}
+
+void initialize_main_memory(core* core) // yuval, add support in multiple cores
+{
+	int i;
+
+	// for (i = 0; i < CORES_NUM; i++) {
+	core->bus_request.bus_addr.index = EMPTY_DATA_FIELD;
+	core->bus_request.bus_addr.tag = EMPTY_DATA_FIELD;
+	core->bus_request.bus_cmd = BUS_FLUSH_CODE;
+	core->bus_request.bus_data = EMPTY_DATA_FIELD;
+	core->bus_request.bus_origid = MEMORY_ORIGIN_CODE;
+	core->bus_request.bus_shared = EMPTY_DATA_FIELD;
+	valid_request = UNVALID_REQUEST_CODE;
+	memory_request_cycle = 0;
+	//}
+
+	empty_request.bus_addr.index = EMPTY_DATA_FIELD;
+	empty_request.bus_addr.tag = EMPTY_DATA_FIELD;
+	empty_request.bus_cmd = EMPTY_DATA_FIELD;
+	empty_request.bus_data = EMPTY_DATA_FIELD;
+	empty_request.bus_origid = EMPTY_DATA_FIELD;
+	empty_request.bus_shared = EMPTY_DATA_FIELD;
+
+	for (i = 0; i < MAIN_MEM_SIZE; i++) {
+		main_mem[i] = EMPTY_DATA_FIELD;
+	}
+
+	initialize_array_from_file("memin.txt", main_mem, MAIN_MEM_SIZE);
+}
+
+int initialize_cores_memory(core* core) // yuval, change later to multiple cores
+{
+	//for (int i = 0; i < CORES_NUM; i++)
+	if (initialize_array_from_file("imem0.txt",core->core_imem,IMEM_LINES_NUM)==ERROR_CODE) // change to multiple core
+		return ERROR_CODE;
+
+	return SUCCESS_CODE;
+}
+
+////////////////////////////
 
 void initialize_core_regs(core *core)
 {
@@ -37,13 +110,77 @@ void initialize_core(core *core, char *imem_filename)
 {
 	initialize_core_regs(core);
 	parse_imem_file(core, imem_filename);
+	initialize_core_statistics(core); // yuval
 	initialize_core_pipeline(core);
+	//initialize_bus(core); // yuval
+	initialize_main_memory(core); // yuval
 	core->next_PC = 0;
 	core->clock_cycle_count = 0;
 	core->core_halt = false;
 	core->hazard = false;
 	core->halt_PC = false;
+	core->bus_request_status = NO_BUS_REQUEST_CODE;
 }
+
+///////////////////////////// yuval
+
+// Main Memory Functions
+
+// Read the bus for cores flushes and requests
+void main_memory_bus_snooper(core* core, int cycle) // add support in multiple cores
+{
+	if (bus.bus_origid == MEMORY_ORIGIN_CODE || bus.bus_cmd == BUS_NO_CMD_CODE)
+		return;
+	if (bus.bus_cmd == BUS_FLUSH_CODE)
+	{
+		main_mem[address_to_integer(bus.bus_addr)] = bus.bus_data;
+		return;
+	}
+	core->bus_request.bus_addr = bus.bus_addr;
+	core->bus_request.bus_cmd = BUS_FLUSH_CODE;
+	core->bus_request.bus_data = main_mem[address_to_integer(bus.bus_addr)];
+	core->bus_request.bus_origid = MEMORY_ORIGIN_CODE;
+	memory_request_cycle = VALID_REQUEST_CODE;
+}
+
+// Checks if there is any ready flush ready under main memory
+int available_memory_to_flush(core* core, int cycle) // add support in multiple cores
+{
+	for (int i = 0; i < CORES_NUM; i++)
+		if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 64)
+			return i;
+
+	return NO_VALUE_CODE;
+
+}
+
+// Cancel memory request in the main memory
+void cancel_memory_request(int core_num) // add support in multiple cores
+{
+	valid_request = UNVALID_REQUEST_CODE;
+}
+
+// Bus functions
+
+void update_bus(core* core, int cycle) // add support to multiple cores
+{
+	//for (int i = 0; i < CORES_NUM; i++) { // Checks if any core want to send bus request by order
+	if (core->bus_request_status == PENDING_SEND_CODE || core->bus_request_status == PENDING_WB_SEND_CODE)
+	{
+		bus = core->bus_request;
+		return;
+	}
+	//}
+	if (available_memory_to_flush(core, cycle) != NO_VALUE_CODE) // If no core want to send, check the main memory
+	{
+		bus = core->bus_request; // [available_memory_to_flush(cycle)];
+		valid_request = UNVALID_REQUEST_CODE;
+	}
+	else
+		bus = empty_request; // If no request
+}
+
+///////////////////////////////////
 
 bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 {
@@ -60,7 +197,7 @@ bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 		return false;
 }
 
-void check_hazards(core *core)
+void check_hazards(core* core)
 {
 	if ((core->core_pipeline[EX_MEM].current_instruction.rd == R0 && core->core_pipeline[ID_EX].current_instruction.rs == R0)
 		|| (core->core_pipeline[EX_MEM].current_instruction.rd == R0 && core->core_pipeline[ID_EX].current_instruction.rt == R0)
@@ -89,7 +226,7 @@ void check_hazards(core *core)
 	{
 		core->hazard = true;
 	}
-	
+
 	if (core->core_pipeline[EX_MEM].current_instruction.rd == core->core_pipeline[IF_ID].current_instruction.rs
 		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
 		&& !core->core_pipeline[IF_ID].halt)
@@ -103,7 +240,7 @@ void check_hazards(core *core)
 	{
 		core->hazard = true;
 	}
-	
+
 	if (core->core_pipeline[MEM_WB].current_instruction.rd == core->core_pipeline[IF_ID].current_instruction.rt
 		&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled
 		&& !core->core_pipeline[IF_ID].halt)
@@ -112,14 +249,14 @@ void check_hazards(core *core)
 	}
 }
 
-void fetch(core *core)
+void fetch(core* core)
 {
 	core->fetch_old_PC = core->next_PC;		// save fetch stage old PC before it's altered, for trace purposes
 	core->core_pipeline[IF_ID].new_instruction = core->core_imem[core->next_PC];
 	core->next_PC += 1;		// take old PC, given there is no branch taken at this cycle. If branch is taken, next_PC is updated in decode stage
 }
 
-void check_branch(core *core)
+void check_branch(core* core)
 {
 	instruction current_instruction = core->core_pipeline[IF_ID].current_instruction;
 	int opcode = current_instruction.opcode;
@@ -174,10 +311,10 @@ void check_branch(core *core)
 	}
 }
 
-void decode(core *core)
+void decode(core* core)
 {
 	bool valid_stage = check_stage_validity(core, IF_ID);
-	
+
 	if (!valid_stage)
 	{
 		return;
@@ -190,7 +327,7 @@ void decode(core *core)
 		core->core_pipeline[IF_ID].new_instruction = core->core_pipeline[IF_ID].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[ID_EX].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction.stalled = true;
-		
+
 	}
 	else
 	{
@@ -199,10 +336,10 @@ void decode(core *core)
 	}
 }
 
-void execute(core *core)
+void execute(core* core)
 {
 	bool valid_stage = check_stage_validity(core, ID_EX);
-	
+
 	if (!valid_stage)
 	{
 		return;
@@ -239,7 +376,7 @@ void execute(core *core)
 	case (and):
 		ALU_output = rs_value & rt_value;
 		break;
-	case(or):
+	case(or ):
 		ALU_output = rs_value | rt_value;
 		break;
 	case(xor):
@@ -277,7 +414,7 @@ void execute(core *core)
 	core->core_pipeline[EX_MEM].new_ALU_output = ALU_output;
 }
 
-void memory(core *core)
+void memory(core* core)
 {
 	bool valid_stage = check_stage_validity(core, EX_MEM);
 	bool stalled = core->core_pipeline[EX_MEM].current_instruction.stalled;
@@ -302,7 +439,7 @@ void memory(core *core)
 	core->core_pipeline[MEM_WB].new_ALU_output = core->core_pipeline[EX_MEM].current_ALU_output;
 }
 
-void write_back(core *core)
+void write_back(core* core)
 {
 	bool valid_stage = check_stage_validity(core, MEM_WB);
 	bool stalled = core->core_pipeline[MEM_WB].current_instruction.stalled;
@@ -319,7 +456,7 @@ void write_back(core *core)
 		return;
 	}
 
-	if (stalled)	
+	if (stalled)
 	{
 		return;
 	}
@@ -329,7 +466,7 @@ void write_back(core *core)
 	{
 		return;
 	}
-	
+
 	int reg = current_instruction.rd;
 	if (reg == R0)
 	{
@@ -338,7 +475,7 @@ void write_back(core *core)
 	core->core_registers[reg] = core->core_pipeline[MEM_WB].current_ALU_output;
 }
 
-void update_stage_buffers(core *core)
+void update_stage_buffers(core* core)
 {
 	// update instructions
 	core->core_pipeline[IF_ID].current_instruction = core->core_pipeline[IF_ID].new_instruction;
@@ -351,7 +488,7 @@ void update_stage_buffers(core *core)
 	core->core_pipeline[MEM_WB].current_ALU_output = core->core_pipeline[MEM_WB].new_ALU_output;
 }
 
-void format_stage_trace(bool valid, bool stalled, bool halt, char *str, int num)
+void format_stage_trace(bool valid, bool stalled, bool halt, char* str, int num)
 {
 	if (!valid || stalled || halt)
 	{
@@ -363,12 +500,12 @@ void format_stage_trace(bool valid, bool stalled, bool halt, char *str, int num)
 	}
 }
 
-void write_trace(core *core, FILE *trace_file)
+void write_trace(core* core, FILE* trace_file)
 {
 	char str[TRACE_FILE_LINE_LEN];
 	int clock_count = core->clock_cycle_count;
 
-	pipeline_stage *core_pipeline = core->core_pipeline;
+	pipeline_stage* core_pipeline = core->core_pipeline;
 	char fetch[STAGE_FORMAT];
 	char decode[STAGE_FORMAT];
 	char execute[STAGE_FORMAT];
@@ -381,16 +518,16 @@ void write_trace(core *core, FILE *trace_file)
 	format_stage_trace(core_pipeline[EX_MEM].valid, core_pipeline[EX_MEM].current_instruction.stalled, core_pipeline[EX_MEM].halt, &memory, core_pipeline[EX_MEM].current_instruction.PC);
 	format_stage_trace(core_pipeline[MEM_WB].valid, core_pipeline[MEM_WB].current_instruction.stalled, core_pipeline[MEM_WB].halt, &write_back, core_pipeline[MEM_WB].current_instruction.PC);
 
-	int *regs = core->current_core_registers;
+	int* regs = core->current_core_registers;
 
-	sprintf(str,"%d %s %s %s %s %s %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X \n",
-			clock_count, fetch, decode, execute, memory, write_back, regs[R2], regs[R3], regs[R4], regs[R5],
-			regs[R6], regs[R7], regs[R8], regs[R9], regs[R10], regs[R11], regs[R12], regs[R13], regs[R14], regs[R15]);
+	sprintf(str, "%d %s %s %s %s %s %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X \n",
+		clock_count, fetch, decode, execute, memory, write_back, regs[R2], regs[R3], regs[R4], regs[R5],
+		regs[R6], regs[R7], regs[R8], regs[R9], regs[R10], regs[R11], regs[R12], regs[R13], regs[R14], regs[R15]);
 
 	fputs(str, trace_file);
 }
 
-void copy_regs(core *core)
+void copy_regs(core* core)
 {
 	for (int i = 0; i < NUM_OF_REGS; i++)
 	{
@@ -398,7 +535,7 @@ void copy_regs(core *core)
 	}
 }
 
-void simulate_clock_cycle(core *core, FILE *trace_file)
+void simulate_clock_cycle(core* core, FILE* trace_file)
 {
 	copy_regs(core);				// snapshot core regs at the beginning of the clock cycle
 	//check_hazards(core);			// check clock cycle hazards
