@@ -2,6 +2,7 @@
 #define CORE_HEADER
 
 #include <stdbool.h>
+#include "cache.h"
 
 #define NUM_OF_REGS 16
 #define MAX_IMEM_LINES 1024
@@ -154,11 +155,11 @@ typedef struct core {
 	int next_PC;
 	int fetch_old_PC;
 	pipeline_stage core_pipeline[PIPELINE_BUFFERS_NUM];
+	cache core_cache;
 	bool hazard;
 	bool core_halt;
 	bool halt_PC;
 } core;
-
 
 
 void initialize_core(core *core, char *imem_filename);

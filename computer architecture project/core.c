@@ -110,6 +110,7 @@ void initialize_core(core *core, char *imem_filename)
 {
 	initialize_core_regs(core);
 	parse_imem_file(core, imem_filename);
+	initialize_cache_rams(&(core->core_cache));
 	initialize_core_statistics(core); // yuval
 	initialize_core_pipeline(core);
 	//initialize_bus(core); // yuval
@@ -195,6 +196,7 @@ bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 	bool valid_stage = core->core_pipeline[pipe_buffer].valid;
 	if (!valid_stage)
 		return false;
+	return true;
 }
 
 void check_hazards(core* core)
@@ -512,11 +514,11 @@ void write_trace(core* core, FILE* trace_file)
 	char memory[STAGE_FORMAT];
 	char write_back[STAGE_FORMAT];
 
-	format_stage_trace(true, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, &fetch, core->fetch_old_PC);
-	format_stage_trace(core_pipeline[IF_ID].valid, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, &decode, core_pipeline[IF_ID].current_instruction.PC);
-	format_stage_trace(core_pipeline[ID_EX].valid, core_pipeline[ID_EX].current_instruction.stalled, core_pipeline[ID_EX].halt, &execute, core_pipeline[ID_EX].current_instruction.PC);
-	format_stage_trace(core_pipeline[EX_MEM].valid, core_pipeline[EX_MEM].current_instruction.stalled, core_pipeline[EX_MEM].halt, &memory, core_pipeline[EX_MEM].current_instruction.PC);
-	format_stage_trace(core_pipeline[MEM_WB].valid, core_pipeline[MEM_WB].current_instruction.stalled, core_pipeline[MEM_WB].halt, &write_back, core_pipeline[MEM_WB].current_instruction.PC);
+	format_stage_trace(true, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, fetch, core->fetch_old_PC);
+	format_stage_trace(core_pipeline[IF_ID].valid, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, decode, core_pipeline[IF_ID].current_instruction.PC);
+	format_stage_trace(core_pipeline[ID_EX].valid, core_pipeline[ID_EX].current_instruction.stalled, core_pipeline[ID_EX].halt, execute, core_pipeline[ID_EX].current_instruction.PC);
+	format_stage_trace(core_pipeline[EX_MEM].valid, core_pipeline[EX_MEM].current_instruction.stalled, core_pipeline[EX_MEM].halt, memory, core_pipeline[EX_MEM].current_instruction.PC);
+	format_stage_trace(core_pipeline[MEM_WB].valid, core_pipeline[MEM_WB].current_instruction.stalled, core_pipeline[MEM_WB].halt, write_back, core_pipeline[MEM_WB].current_instruction.PC);
 
 	int* regs = core->current_core_registers;
 
