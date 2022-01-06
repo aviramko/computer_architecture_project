@@ -18,6 +18,7 @@ int memory_request_cycle; // change to multiple cores
 int main_mem[MAIN_MEM_SIZE];
 msi_bus empty_request;
 msi_bus bus;
+msi_bus memory_bus_request[CORES_NUM];
 
 void initialize_core_statistics(core* core)
 {
@@ -47,16 +48,17 @@ void initialize_main_memory(core* core) // yuval, add support in multiple cores
 {
 	int i;
 
-	// for (i = 0; i < CORES_NUM; i++) {
-	core->bus_request.bus_addr.index = EMPTY_DATA_FIELD;
-	core->bus_request.bus_addr.tag = EMPTY_DATA_FIELD;
-	core->bus_request.bus_cmd = BUS_FLUSH_CODE;
-	core->bus_request.bus_data = EMPTY_DATA_FIELD;
-	core->bus_request.bus_origid = MEMORY_ORIGIN_CODE;
-	core->bus_request.bus_shared = EMPTY_DATA_FIELD;
-	valid_request = UNVALID_REQUEST_CODE;
-	memory_request_cycle = 0;
-	//}
+	for (i = 0; i < CORES_NUM; i++) 
+	{
+		memory_bus_request[i].bus_addr.index = EMPTY_DATA_FIELD;
+		memory_bus_request[i].bus_addr.tag = EMPTY_DATA_FIELD;
+		memory_bus_request[i].bus_cmd = BUS_FLUSH_CODE;
+		memory_bus_request[i].bus_data = EMPTY_DATA_FIELD;
+		memory_bus_request[i].bus_origid = MEMORY_ORIGIN_CODE;
+		memory_bus_request[i].bus_shared = EMPTY_DATA_FIELD;
+		valid_request = UNVALID_REQUEST_CODE;
+		memory_request_cycle = 0;
+	}
 
 	empty_request.bus_addr.index = EMPTY_DATA_FIELD;
 	empty_request.bus_addr.tag = EMPTY_DATA_FIELD;
@@ -137,22 +139,36 @@ void main_memory_bus_snooper(core* core, int cycle) // add support in multiple c
 		main_mem[address_to_integer(bus.bus_addr)] = bus.bus_data;
 		return;
 	}
-	core->bus_request.bus_addr = bus.bus_addr;
-	core->bus_request.bus_cmd = BUS_FLUSH_CODE;
-	core->bus_request.bus_data = main_mem[address_to_integer(bus.bus_addr)];
-	core->bus_request.bus_origid = MEMORY_ORIGIN_CODE;
-	memory_request_cycle = VALID_REQUEST_CODE;
+	memory_bus_request[bus.bus_origid].bus_addr = bus.bus_addr;
+	memory_bus_request[bus.bus_origid].bus_cmd = BUS_FLUSH_CODE;
+	memory_bus_request[bus.bus_origid].bus_data = main_mem[address_to_integer(bus.bus_addr)];
+	memory_bus_request[bus.bus_origid].bus_origid = MEMORY_ORIGIN_CODE;
+	memory_request_cycle = cycle;
+	valid_request = VALID_REQUEST_CODE;
 }
 
 // Checks if there is any ready flush ready under main memory
 int available_memory_to_flush(core* core, int cycle) // add support in multiple cores
 {
-	for (int i = 0; i < CORES_NUM; i++)
-		if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 64)
-			return i;
+	if (memory_bus_request[bus.bus_origid].bus_origid == MEMORY_ORIGIN_CODE)
+	{
+		for (int i = 0; i < CORES_NUM; i++)
+			if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 16)
+				return i;
+	}
+
+	else
+	{
+		for (int i = 0; i < CORES_NUM; i++)
+		{
+			int num = (i + 1 + memory_bus_request[bus.bus_origid].bus_origid) % 4;
+			if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 16) // add multiple cores here
+				return num;
+		}
+	}
+
 
 	return NO_VALUE_CODE;
-
 }
 
 // Cancel memory request in the main memory
@@ -174,7 +190,7 @@ void update_bus(core* core, int cycle) // add support to multiple cores
 	//}
 	if (available_memory_to_flush(core, cycle) != NO_VALUE_CODE) // If no core want to send, check the main memory
 	{
-		bus = core->bus_request; // [available_memory_to_flush(cycle)];
+		bus = memory_bus_request[available_memory_to_flush(core, cycle)];
 		valid_request = UNVALID_REQUEST_CODE;
 	}
 	else
