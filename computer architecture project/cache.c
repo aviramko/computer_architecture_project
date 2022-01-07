@@ -23,6 +23,27 @@ void initialize_cache_rams(cache *core_cache)
 		{
 			core_cache->tsram[i].tag = 0;
 			core_cache->tsram[i].MESI_state = 0;
+			core_cache->tsram[i].valid = false;
 		}
 	}
+}
+
+void write_hit()
+{
+	//update_MESI
+}
+
+void write_miss()
+{
+
+}
+
+void read_hit()
+{
+
+}
+
+void read_miss()
+{
+
 }

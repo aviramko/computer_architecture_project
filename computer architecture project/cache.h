@@ -1,9 +1,11 @@
 #ifndef CACHE_HEADER
 #define CACHE_HEADER
 
+#include <stdbool.h>
+
 #define DSRAM_SIZE 256
 #define BLOCK_SIZE 4
-#define NUM_OF_BLOCKS (DSRAM_SIZE/BLOCK_SIZE)
+#define DSRAM_FRAMES (DSRAM_SIZE/BLOCK_SIZE)
 
 #define TSRAM_SIZE 64
 
@@ -15,6 +17,7 @@
 typedef struct tsram_entry {
 	unsigned int tag : 12;
 	unsigned int MESI_state : 2;
+	bool valid;
 } tsram_entry;
 
 typedef struct cache {
