@@ -1,7 +1,7 @@
 #ifndef UTILS_HEADER
 #define UTILS_HEADER
 
-#include "core.h"
+#include "bus_mem.h"
 
 #define SUCCESS_CODE 0 // yuval
 #define ERROR_CODE -1 //yuval

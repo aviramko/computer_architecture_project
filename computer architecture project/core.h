@@ -2,7 +2,10 @@
 #define CORE_HEADER
 
 #include <stdbool.h>
+#include <stdio.h>
+
 #include "cache.h"
+#include "bus_mem.h"
 
 #define NUM_OF_REGS 16
 #define MAX_IMEM_LINES 1024
@@ -124,23 +127,6 @@ typedef struct statistics
 
 } statistics;
 
-typedef struct memory_address
-{
-	unsigned int index : 8;
-	unsigned int tag : 12;
-
-} address;
-
-typedef struct MSI_bus
-{
-	unsigned int bus_shared : 1;
-	unsigned int bus_data : 32;
-	address bus_addr;
-	unsigned int bus_cmd : 2;
-	unsigned int bus_origid : 3;
-
-} msi_bus;
-
 //////////////////////////////////////
 
 typedef struct core {
@@ -159,6 +145,7 @@ typedef struct core {
 	bool hazard;
 	bool core_halt;
 	bool halt_PC;
+	char *imem_file;
 } core;
 
 

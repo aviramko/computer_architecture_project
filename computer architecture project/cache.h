@@ -2,6 +2,7 @@
 #define CACHE_HEADER
 
 #include <stdbool.h>
+#include "core.h"
 
 #define DSRAM_SIZE 256
 #define BLOCK_SIZE 4
@@ -13,6 +14,17 @@
 #define MESI_SHARED 1
 #define MESI_EXCLUSIVE 2
 #define MESI_MODIFIED 3
+
+// Blocks Status Codes
+#define VALID_BLOCK_CODE 0
+#define DIRTY_BLOCK_CODE 1
+
+typedef enum MESI_states {
+	invalid,
+	shared,
+	exclusive,
+	modified
+} MESI_states;
 
 typedef struct tsram_entry {
 	unsigned int tag : 12;
@@ -26,5 +38,6 @@ typedef struct cache {
 } cache;
 
 void initialize_cache_rams(cache *core_cache);
+void read_mem(core *core);
 
 #endif // !CACHE_HEADER

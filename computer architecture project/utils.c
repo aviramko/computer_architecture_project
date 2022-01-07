@@ -32,14 +32,8 @@ int initialize_array_from_file(char* file_name, int* memory_array, int max_array
 
 	while (EOF != fscanf(file_pointer, "%x\n", &memory_array[i]) && i < max_array_size) i++;
 
-	for (i; i < max_array_size; i++)
-	{
-		memory_array[i] = 0;
-	}
-
 	fclose(file_pointer);
 	return SUCCESS_CODE;
 }
-// Aviram asks - what if file is shorter than 2E20 lines? How can we tell which part of the memory array is initialized?
 
 

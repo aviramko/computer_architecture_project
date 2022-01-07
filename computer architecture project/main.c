@@ -9,18 +9,25 @@
 #include <string.h>
 
 #include "core.h"
+#include "bus_mem.h"
 
 int main(int argc, char* argv[])
 {
 	core core0;// *core1 = NULL, *core2 = NULL, *core3 = NULL;
+	msi_bus bus;
+	msi_bus empty_request;
+	int main_mem[MAIN_MEM_SIZE];
 
+	initialize_main_mem(main_mem);
 	initialize_core(&core0, argv[1]);
+
 	FILE* fp_core0trace = fopen(argv[11], "w");
 
 	while (!core0.core_halt)
 	{
 		simulate_clock_cycle(&core0, fp_core0trace);
-		//update_bus();
+		//do_bus_and_main_mem_stuff(&core0, main_mem, bus, memory_bus_request);
+		//do_bus_and_main_mem_stuff(cores_array, main_mem_array, bus);
 	}
 
 	fclose(fp_core0trace);

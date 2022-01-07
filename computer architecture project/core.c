@@ -5,25 +5,18 @@
 #include <stdlib.h>
 
 #include "core.h"
-#include "parser.h"
-#include "utils.h"
 
 #define TRACE_FILE_LINE_LEN 200	// more than enough
 #define STAGE_FORMAT 4
 
 //////////////////////// yuval
 
-int valid_request;
-int memory_request_cycle; // change to multiple cores
-int main_mem[MAIN_MEM_SIZE];
-msi_bus empty_request;
-msi_bus bus;
-msi_bus memory_bus_request[CORES_NUM];
+//int valid_request;
+//int memory_request_cycle; // change to multiple cores
+//int main_mem[MAIN_MEM_SIZE];
 
 void initialize_core_statistics(core* core)
 {
-	// for(int i = 0; i< CORES_NUM; i++){
-
 	core->stat.cycles = 1;
 	core->stat.instructions = 0;
 	core->stat.read_hit = 0;
@@ -32,55 +25,6 @@ void initialize_core_statistics(core* core)
 	core->stat.write_miss = 0;
 	core->stat.decode_stall = 0;
 	core->stat.mem_stall = 0;
-	//}
-}
-
-void initialize_bus(core* core) // TODO use
-{
-	bus.bus_addr.index = EMPTY_DATA_FIELD;
-	bus.bus_addr.tag = EMPTY_DATA_FIELD;
-	bus.bus_cmd = EMPTY_DATA_FIELD;
-	bus.bus_data = EMPTY_DATA_FIELD;
-	bus.bus_origid = EMPTY_DATA_FIELD;
-}
-
-void initialize_main_memory(core* core) // yuval, add support in multiple cores
-{
-	int i;
-
-	for (i = 0; i < CORES_NUM; i++) 
-	{
-		memory_bus_request[i].bus_addr.index = EMPTY_DATA_FIELD;
-		memory_bus_request[i].bus_addr.tag = EMPTY_DATA_FIELD;
-		memory_bus_request[i].bus_cmd = BUS_FLUSH_CODE;
-		memory_bus_request[i].bus_data = EMPTY_DATA_FIELD;
-		memory_bus_request[i].bus_origid = MEMORY_ORIGIN_CODE;
-		memory_bus_request[i].bus_shared = EMPTY_DATA_FIELD;
-		valid_request = UNVALID_REQUEST_CODE;
-		memory_request_cycle = 0;
-	}
-
-	empty_request.bus_addr.index = EMPTY_DATA_FIELD;
-	empty_request.bus_addr.tag = EMPTY_DATA_FIELD;
-	empty_request.bus_cmd = EMPTY_DATA_FIELD;
-	empty_request.bus_data = EMPTY_DATA_FIELD;
-	empty_request.bus_origid = EMPTY_DATA_FIELD;
-	empty_request.bus_shared = EMPTY_DATA_FIELD;
-
-	for (i = 0; i < MAIN_MEM_SIZE; i++) {
-		main_mem[i] = EMPTY_DATA_FIELD;
-	}
-
-	initialize_array_from_file("memin.txt", main_mem, MAIN_MEM_SIZE);
-}
-
-int initialize_cores_memory(core* core) // yuval, change later to multiple cores
-{
-	//for (int i = 0; i < CORES_NUM; i++)
-	if (initialize_array_from_file("imem0.txt",core->core_imem,IMEM_LINES_NUM)==ERROR_CODE) // change to multiple core
-		return ERROR_CODE;
-
-	return SUCCESS_CODE;
 }
 
 ////////////////////////////
@@ -115,8 +59,10 @@ void initialize_core(core *core, char *imem_filename)
 	initialize_cache_rams(&(core->core_cache));
 	initialize_core_statistics(core); // yuval
 	initialize_core_pipeline(core);
+	initialize_bus(&(core->bus_request));
+
 	//initialize_bus(core); // yuval
-	initialize_main_memory(core); // yuval
+	//initialize_main_memory(core); // yuval
 	core->next_PC = 0;
 	core->clock_cycle_count = 0;
 	core->core_halt = false;
@@ -124,80 +70,6 @@ void initialize_core(core *core, char *imem_filename)
 	core->halt_PC = false;
 	core->bus_request_status = NO_BUS_REQUEST_CODE;
 }
-
-///////////////////////////// yuval
-
-// Main Memory Functions
-
-// Read the bus for cores flushes and requests
-void main_memory_bus_snooper(core* core, int cycle) // add support in multiple cores
-{
-	if (bus.bus_origid == MEMORY_ORIGIN_CODE || bus.bus_cmd == BUS_NO_CMD_CODE)
-		return;
-	if (bus.bus_cmd == BUS_FLUSH_CODE)
-	{
-		main_mem[address_to_integer(bus.bus_addr)] = bus.bus_data;
-		return;
-	}
-	memory_bus_request[bus.bus_origid].bus_addr = bus.bus_addr;
-	memory_bus_request[bus.bus_origid].bus_cmd = BUS_FLUSH_CODE;
-	memory_bus_request[bus.bus_origid].bus_data = main_mem[address_to_integer(bus.bus_addr)];
-	memory_bus_request[bus.bus_origid].bus_origid = MEMORY_ORIGIN_CODE;
-	memory_request_cycle = cycle;
-	valid_request = VALID_REQUEST_CODE;
-}
-
-// Checks if there is any ready flush ready under main memory
-int available_memory_to_flush(core* core, int cycle) // add support in multiple cores
-{
-	if (memory_bus_request[bus.bus_origid].bus_origid == MEMORY_ORIGIN_CODE)
-	{
-		for (int i = 0; i < CORES_NUM; i++)
-			if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 16)
-				return i;
-	}
-
-	else
-	{
-		for (int i = 0; i < CORES_NUM; i++)
-		{
-			int num = (i + 1 + memory_bus_request[bus.bus_origid].bus_origid) % 4; // next core in RR
-			if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 16) // add multiple cores here
-				return num;
-		}
-	}
-
-
-	return NO_VALUE_CODE;
-}
-
-// Cancel memory request in the main memory
-void cancel_memory_request(int core_num) // add support in multiple cores
-{
-	valid_request = UNVALID_REQUEST_CODE;
-}
-
-// Bus functions
-
-void update_bus(core* core, int cycle) // add support to multiple cores
-{
-	//for (int i = 0; i < CORES_NUM; i++) { // Checks if any core want to send bus request by order
-	if (core->bus_request_status == PENDING_SEND_CODE || core->bus_request_status == PENDING_WB_SEND_CODE)
-	{
-		bus = core->bus_request;
-		return;
-	}
-	//}
-	if (available_memory_to_flush(core, cycle) != NO_VALUE_CODE) // If no core want to send, check the main memory
-	{
-		bus = memory_bus_request[available_memory_to_flush(core, cycle)];
-		valid_request = UNVALID_REQUEST_CODE;
-	}
-	else
-		bus = empty_request; // If no request
-}
-
-///////////////////////////////////
 
 bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 {
@@ -418,11 +290,12 @@ void execute(core* core)
 	case (bgt):
 	case (ble):
 	case (bge):
+		break;
 	case (jal):
 		break;
 	case (lw):
-		break;
 	case (sw):
+		ALU_output = rs_value + rt_value;
 		break;
 	case (halt):
 		break;
@@ -435,14 +308,15 @@ void execute(core* core)
 void memory(core* core)
 {
 	bool valid_stage = check_stage_validity(core, EX_MEM);
-	bool stalled = core->core_pipeline[EX_MEM].current_instruction.stalled;
+	instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
+	bool stalled = current_instruction.stalled;
 
 	if (!valid_stage)
 	{
 		return;
 	}
 
-	if (core->core_pipeline[EX_MEM].current_instruction.opcode == halt)
+	if (current_instruction.opcode == halt)
 	{
 		core->core_pipeline[ID_EX].halt = true;
 	}
@@ -452,6 +326,16 @@ void memory(core* core)
 		core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
 		return;
 	}
+
+	// memory treatment
+	if (current_instruction.opcode == lw)
+	{
+		read_mem(core);
+	}
+	//else if (current_instruction.opcode == sw)
+	//{
+	//
+	//}
 
 	core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
 	core->core_pipeline[MEM_WB].new_ALU_output = core->core_pipeline[EX_MEM].current_ALU_output;
