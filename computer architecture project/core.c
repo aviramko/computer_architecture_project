@@ -161,7 +161,7 @@ int available_memory_to_flush(core* core, int cycle) // add support in multiple 
 	{
 		for (int i = 0; i < CORES_NUM; i++)
 		{
-			int num = (i + 1 + memory_bus_request[bus.bus_origid].bus_origid) % 4;
+			int num = (i + 1 + memory_bus_request[bus.bus_origid].bus_origid) % 4; // next core in RR
 			if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 16) // add multiple cores here
 				return num;
 		}
