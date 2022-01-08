@@ -1,18 +1,8 @@
-﻿  core.c
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(78,60): warning C4133: 'function': incompatible types - from 'instruction [1024]' to 'int *'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(613,110): warning C4047: 'function': 'char *' differs in levels of indirection from 'char (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(613,104): warning C4024: 'format_stage_trace': different types for formal and actual parameter 4
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(614,133): warning C4047: 'function': 'char *' differs in levels of indirection from 'char (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(614,126): warning C4024: 'format_stage_trace': different types for formal and actual parameter 4
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(615,134): warning C4047: 'function': 'char *' differs in levels of indirection from 'char (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(615,126): warning C4024: 'format_stage_trace': different types for formal and actual parameter 4
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(616,136): warning C4047: 'function': 'char *' differs in levels of indirection from 'char (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(616,129): warning C4024: 'format_stage_trace': different types for formal and actual parameter 4
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(617,140): warning C4047: 'function': 'char *' differs in levels of indirection from 'char (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(617,129): warning C4024: 'format_stage_trace': different types for formal and actual parameter 4
+﻿  cache.c
+  core.c
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\core.c(80,60): warning C4133: 'function': incompatible types - from 'instruction [1024]' to 'int *'
   main.c
   parser.c
   utils.c
   Generating Code...
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\core.c(198): warning C4715: 'check_stage_validity': not all control paths return a value
-  computer architecture project.vcxproj -> C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\Debug\computer architecture project.exe
+  computer architecture project.vcxproj -> C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\Debug\computer architecture project.exe

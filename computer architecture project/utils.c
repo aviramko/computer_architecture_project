@@ -19,7 +19,7 @@ int address_to_integer(address addr)
 	return result;
 }
 
-// Initilizing int array from a file.
+// Initializing int array from a file. return memory length
 int initialize_array_from_file(char* file_name, int* memory_array, int max_array_size)
 {
 	int i = 0;
@@ -35,3 +35,6 @@ int initialize_array_from_file(char* file_name, int* memory_array, int max_array
 	fclose(file_pointer);
 	return SUCCESS_CODE;
 }
+// Aviram asks - what if file is shorter than 2E20 lines? How can we tell which part of the memory array is initialized?
+
+
