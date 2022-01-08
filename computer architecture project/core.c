@@ -61,8 +61,6 @@ void initialize_core(core *core, char *imem_filename)
 	initialize_core_pipeline(core);
 	initialize_bus(&(core->bus_request));
 
-	//initialize_bus(core); // yuval
-	//initialize_main_memory(core); // yuval
 	core->next_PC = 0;
 	core->clock_cycle_count = 0;
 	core->core_halt = false;

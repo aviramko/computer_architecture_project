@@ -1,11 +1,12 @@
 #ifndef CORE_HEADER
 #define CORE_HEADER
 
-#include <stdbool.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "cache.h"
 #include "bus_mem.h"
+#include "parser.h"
 
 #define NUM_OF_REGS 16
 #define MAX_IMEM_LINES 1024
