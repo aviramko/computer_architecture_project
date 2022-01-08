@@ -89,6 +89,14 @@ bool mem_block_search(tsram_entry *tsram, int index, int tag)
 	}
 }
 
+void core_snoop_bus(core *core)
+{
+	for (int i = 0; i < CORES_NUM; i++)
+	{
+
+	}
+}
+
 void read_mem(core *core)
 {
 	int read_address = core->core_pipeline[EX_MEM].current_ALU_output;

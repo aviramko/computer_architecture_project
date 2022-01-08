@@ -19,8 +19,9 @@ int main(int argc, char* argv[])
 
 	int cycle = 0;
 	int next_RR = 0;
+	initialize_bus(&bus);
+	initialize_main_mem(main_mem, valid_request, memory_request_cycle);
 
-	initialize_main_mem(&main_mem, &valid_request, &memory_request_cycle);
 	for (int i = 0; i < CORES_NUM; i++)
 		initialize_core(&cores[i], argv[i + 1]);
 
@@ -28,12 +29,12 @@ int main(int argc, char* argv[])
 
 	while (!all_cores_halt(cores)) // all cores halt
 	{
-		update_bus(cores, &bus, cycle, &next_RR, &valid_request, &memory_request_cycle);
+		update_bus(cores, &bus, cycle, &next_RR, valid_request, memory_request_cycle);
 
-		main_memory_bus_snooper(&cores, bus, cycle, &main_mem, &valid_request, &memory_request_cycle);
+		main_memory_bus_snooper(cores, bus, cycle, main_mem, valid_request, memory_request_cycle);
 
-		//for(i=0; i<CORES_NUM; i++)
-		simulate_clock_cycle(&cores[0], fp_core0trace);
+		for (int i = 0; i < CORES_NUM; i++)
+			simulate_clock_cycle(&cores[i], fp_core0trace);
 
 		//for(i=0; i<CORES_NUM; i++)
 		// core_bus_snooper

@@ -8,20 +8,20 @@
 #include "bus_mem.h"
 #include "utils.h"
 
-void initialize_main_mem(int* main_mem[MAIN_MEM_SIZE], int* valid_request[CORES_NUM], int* memory_request_cycle[CORES_NUM])
+void initialize_main_mem(int *main_mem, int *valid_request, int *memory_request_cycle)
 {
 	int i;
 
 	for (i = 0; i < CORES_NUM; i++)
 	{
-		*valid_request[i] = UNVALID_REQUEST_CODE;
-		*memory_request_cycle[i] = 0;
+		valid_request[i] = UNVALID_REQUEST_CODE;
+		memory_request_cycle[i] = 0;
 	}
 
 	// maybe initialize empty request
 
 	for (i = 0; i < MAIN_MEM_SIZE; i++)
-		*main_mem[i] = EMPTY_DATA_FIELD;
+		main_mem[i] = EMPTY_DATA_FIELD;
 
 
 	initialize_array_from_file("memin.txt", *main_mem, MAIN_MEM_SIZE);
@@ -36,16 +36,10 @@ void initialize_bus(msi_bus *bus)
 	bus->bus_origid = EMPTY_DATA_FIELD;
 }
 
-//void arbitration()
-//{
-//
-//}
-
 void put_xaction_on_bus(msi_bus xaction, msi_bus *bus)
 {
 	
 }
-
 
 void do_bus_and_main_mem_stuff(core *core, int *main_mem, msi_bus *bus)
 {
@@ -53,33 +47,30 @@ void do_bus_and_main_mem_stuff(core *core, int *main_mem, msi_bus *bus)
 	// if bus is busy, stall cores as necessary (consider taking update_stage_buffers() function for each core and executing it after main_mem and bus actions).
 	// if bus just finished answering a request, return the request to the one who asked it (bus_origid etc...).
 	// if bus is free, let arbitration take place and send a request on the bus for the winning core (if such one exists in any of the cores for this cycle).
-
-	
 }
-
 
 // Main Memory Functions
 
 // Read the bus for cores flushes and requests
-void main_memory_bus_snooper(core* cores[CORES_NUM], msi_bus bus, int cycle, int* main_mem[MAIN_MEM_SIZE], int* valid_request[CORES_NUM], int* memory_request_cycle[CORES_NUM])
+void main_memory_bus_snooper(core *cores, msi_bus bus, int cycle, int *main_mem, int *valid_request, int *memory_request_cycle)
 {
 	if (bus.bus_origid == MEMORY_ORIGIN_CODE || bus.bus_cmd == BUS_NO_CMD_CODE)
 		return;
 	if (bus.bus_cmd == BUS_FLUSH_CODE)
 	{
-		(*main_mem)[address_to_integer(bus.bus_addr)] = bus.bus_data;
+		main_mem[address_to_integer(bus.bus_addr)] = bus.bus_data;
 		return;
 	}
-	(*cores)[bus.bus_origid].bus_request.bus_addr = bus.bus_addr;
-	(*cores)[bus.bus_origid].bus_request.bus_cmd = BUS_FLUSH_CODE;
-	(*cores)[bus.bus_origid].bus_request.bus_data = main_mem[address_to_integer(bus.bus_addr)];
-	(*cores)[bus.bus_origid].bus_request.bus_origid = MEMORY_ORIGIN_CODE;
-	(*memory_request_cycle)[bus.bus_origid] = cycle;
-	(*valid_request) = VALID_REQUEST_CODE;
+	cores[bus.bus_origid].bus_request.bus_addr = bus.bus_addr;
+	cores[bus.bus_origid].bus_request.bus_cmd = BUS_FLUSH_CODE;
+	cores[bus.bus_origid].bus_request.bus_data = main_mem[address_to_integer(bus.bus_addr)];
+	cores[bus.bus_origid].bus_request.bus_origid = MEMORY_ORIGIN_CODE;
+	memory_request_cycle[bus.bus_origid] = cycle;
+	*valid_request = VALID_REQUEST_CODE;
 }
 
-// Checks if there is any ready flush ready under main memory
-int available_memory_to_flush(int cycle, int valid_request[CORES_NUM], int memory_request_cycle[CORES_NUM]) // add support in multiple cores
+// Checks if there is any flush ready under main memory
+int available_memory_to_flush(int cycle, int *valid_request, int *memory_request_cycle) // add support in multiple cores
 {
 	for (int i = 0; i < CORES_NUM; i++)
 		if (valid_request[i] == VALID_REQUEST_CODE && cycle - memory_request_cycle[i] >= 16)
@@ -89,15 +80,16 @@ int available_memory_to_flush(int cycle, int valid_request[CORES_NUM], int memor
 }
 
 // Cancel memory request in the main memory
-void cancel_memory_request(int core_num, int valid_request[CORES_NUM]) // add support in multiple cores
+void cancel_memory_request(int core_num, int *valid_request) // add support in multiple cores
 {
 	valid_request[core_num] = UNVALID_REQUEST_CODE;
 }
 
 // Bus functions
 
-void update_bus(core cores[CORES_NUM], msi_bus* bus, int cycle, int* next_RR, int* valid_request[CORES_NUM], int memory_request_cycle[CORES_NUM])
+void update_bus(core *cores, msi_bus* bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle)
 {
+	//check bus availability first
 	for (int i = 0; i < CORES_NUM; i++)
 	{
 		int loc = (i + (*next_RR)) % CORES_NUM;
@@ -115,7 +107,7 @@ void update_bus(core cores[CORES_NUM], msi_bus* bus, int cycle, int* next_RR, in
 	if (mem_to_flush != NO_VALUE_CODE) // If no core want to send, check the main memory
 	{
 		*bus = cores[mem_to_flush].bus_request;
-		*valid_request[mem_to_flush] = UNVALID_REQUEST_CODE;
+		valid_request[mem_to_flush] = UNVALID_REQUEST_CODE;
 	}
 	else
 		initialize_bus(&bus);

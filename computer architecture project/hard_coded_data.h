@@ -202,8 +202,13 @@ typedef struct MSI_bus
 	address bus_addr;
 	unsigned int bus_cmd : 2;
 	unsigned int bus_origid : 3;
-
+	bool busy;
 } msi_bus;
+
+typedef struct MSI_bus_FF {
+	msi_bus old_bus;
+	msi_bus new_bus;
+} msi_bus_ff;
 
 struct _core {
 	cache core_cache;
