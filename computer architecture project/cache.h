@@ -32,7 +32,8 @@ typedef enum MESI_states {
 
 typedef struct tsram_entry {
 	unsigned int tag : 12;
-	unsigned int MESI_state : 2;
+	unsigned int MESI_state;
+	unsigned int next_MESI_state;
 	bool valid;
 } tsram_entry;
 
@@ -45,5 +46,6 @@ struct _cache {
 
 void initialize_cache_rams(cache *core_cache);
 void read_mem(core *core);
+void write_mem(core *core);
 
 #endif // !CACHE_HEADER

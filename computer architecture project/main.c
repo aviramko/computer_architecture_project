@@ -17,17 +17,32 @@ int main(int argc, char* argv[])
 	msi_bus empty_request;
 	int main_mem[MAIN_MEM_SIZE];
 
+	int i, cycle = 0;
+
 	initialize_main_mem(main_mem);
 	initialize_core(&core0, argv[1]);
 
 	FILE* fp_core0trace = fopen(argv[11], "w");
 
-	while (!core0.core_halt)
+	while (!core0.core_halt) // all cores halt
 	{
+		//update_bus(cycle);
+
+		//main_memory_bus_snooper(core,cycle);
+
+		//for(i=0; i<CORES_NUM; i++)
 		simulate_clock_cycle(&core0, fp_core0trace);
+
+		//for(i=0; i<CORES_NUM; i++)
+		// core_bus_snooper
+
+		cycle++;
+
 		//do_bus_and_main_mem_stuff(&core0, main_mem, bus, memory_bus_request);
 		//do_bus_and_main_mem_stuff(cores_array, main_mem_array, bus);
 	}
+
+	// print to files
 
 	fclose(fp_core0trace);
 

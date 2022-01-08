@@ -4,7 +4,7 @@
 //#include <stdio.h>
 //#include <stdlib.h>
 
-//#include "core.h"
+#include "core.h"
 #include "bus_mem.h"
 #include "utils.h"
 
@@ -28,6 +28,28 @@ void initialize_bus(msi_bus *bus) // TODO use
 	bus->bus_data = EMPTY_DATA_FIELD;
 	bus->bus_origid = EMPTY_DATA_FIELD;
 }
+
+//void arbitration()
+//{
+//
+//}
+
+void put_xaction_on_bus(msi_bus xaction, msi_bus *bus)
+{
+	
+}
+
+
+void do_bus_and_main_mem_stuff(core *core, int *main_mem, msi_bus *bus)
+{
+	// first, check if any xaction is on the bus. Meaning, check if the bus is taken or a previous BusRd or BusRdX xaction hasn't finished by using Flush xaction.
+	// if bus is busy, stall cores as necessary (consider taking update_stage_buffers() function for each core and executing it after main_mem and bus actions).
+	// if bus just finished answering a request, return the request to the one who asked it (bus_origid etc...).
+	// if bus is free, let arbitration take place and send a request on the bus for the winning core (if such one exists in any of the cores for this cycle).
+
+	
+}
+
 
 //// Main Memory Functions
 //
