@@ -8,19 +8,26 @@
 #include "bus_mem.h"
 #include "utils.h"
 
-void initialize_main_mem(int *main_mem)
+void initialize_main_mem(int* main_mem[MAIN_MEM_SIZE], int* valid_request[CORES_NUM], int* memory_request_cycle[CORES_NUM])
 {
-	int i = 0;
+	int i;
 
-	for (i = 0; i < MAIN_MEM_SIZE; i++) 
+	for (i = 0; i < CORES_NUM; i++)
 	{
-		main_mem[i] = EMPTY_DATA_FIELD;
+		*valid_request[i] = UNVALID_REQUEST_CODE;
+		*memory_request_cycle[i] = 0;
 	}
 
-	initialize_array_from_file("memin.txt", main_mem, MAIN_MEM_SIZE);
+	// maybe initialize empty request
+
+	for (i = 0; i < MAIN_MEM_SIZE; i++)
+		*main_mem[i] = EMPTY_DATA_FIELD;
+
+
+	initialize_array_from_file("memin.txt", *main_mem, MAIN_MEM_SIZE);
 }
 
-void initialize_bus(msi_bus *bus) // TODO use
+void initialize_bus(msi_bus *bus)
 {
 	bus->bus_addr.index = EMPTY_DATA_FIELD;
 	bus->bus_addr.tag = EMPTY_DATA_FIELD;
@@ -51,72 +58,65 @@ void do_bus_and_main_mem_stuff(core *core, int *main_mem, msi_bus *bus)
 }
 
 
-//// Main Memory Functions
-//
-//// Read the bus for cores flushes and requests
-//void main_memory_bus_snooper(core* core, int cycle) // add support in multiple cores
-//{
-//	if (bus.bus_origid == MEMORY_ORIGIN_CODE || bus.bus_cmd == BUS_NO_CMD_CODE)
-//		return;
-//	if (bus.bus_cmd == BUS_FLUSH_CODE)
-//	{
-//		main_mem[address_to_integer(bus.bus_addr)] = bus.bus_data;
-//		return;
-//	}
-//	memory_bus_request[bus.bus_origid].bus_addr = bus.bus_addr;
-//	memory_bus_request[bus.bus_origid].bus_cmd = BUS_FLUSH_CODE;
-//	memory_bus_request[bus.bus_origid].bus_data = main_mem[address_to_integer(bus.bus_addr)];
-//	memory_bus_request[bus.bus_origid].bus_origid = MEMORY_ORIGIN_CODE;
-//	memory_request_cycle = cycle;
-//	valid_request = VALID_REQUEST_CODE;
-//}
-//
-//// Checks if there is any ready flush ready under main memory
-//int available_memory_to_flush(core* core, int cycle) // add support in multiple cores
-//{
-//	// if (memory_bus_request[bus.bus_origid].bus_origid == MEMORY_ORIGIN_CODE)
-	// {
-//		for (int i = 0; i < CORES_NUM; i++)
-//			if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 16)
-//				return i;
-//	//}
-//
-//	// else
-	// {
-	// 	for (int i = 0; i < CORES_NUM; i++)
-	// 	{
-	// 		int num = (i + 1 + memory_bus_request[bus.bus_origid].bus_origid) % 4; // next core in RR
-	// 		if (valid_request == VALID_REQUEST_CODE && cycle - memory_request_cycle >= 16) // add multiple cores here
-	// 			return num;
-	// 	}
-	// }
-//
-//
-//	return NO_VALUE_CODE;
-//}
-//
-//// Cancel memory request in the main memory
-//void cancel_memory_request(int core_num) // add support in multiple cores
-//{
-//	valid_request = UNVALID_REQUEST_CODE;
-//}
-//
-//// Bus functions
-//
-//void update_bus(core* core, int cycle) // add support to multiple cores
-//{
-//	//for (int i = 0; i < CORES_NUM; i++) { // Checks if any core want to send bus request by order
-//	if (core->bus_request_status == PENDING_SEND_CODE || core->bus_request_status == PENDING_WB_SEND_CODE)
-//	{
-//		bus = core->bus_request;
-//		return;
-//	}
-//	//}
-//	if (available_memory_to_flush(core, cycle) != NO_VALUE_CODE) // If no core want to send, check the main memory
-//	{
-//		bus = memory_bus_request[available_memory_to_flush(core, cycle)];
-//		valid_request = UNVALID_REQUEST_CODE;
-//	}
-//	else
-//		bus = empty_request; // If no request
-//}
+// Main Memory Functions
+
+// Read the bus for cores flushes and requests
+void main_memory_bus_snooper(core* cores[CORES_NUM], msi_bus bus, int cycle, int* main_mem[MAIN_MEM_SIZE], int* valid_request[CORES_NUM], int* memory_request_cycle[CORES_NUM])
+{
+	if (bus.bus_origid == MEMORY_ORIGIN_CODE || bus.bus_cmd == BUS_NO_CMD_CODE)
+		return;
+	if (bus.bus_cmd == BUS_FLUSH_CODE)
+	{
+		(*main_mem)[address_to_integer(bus.bus_addr)] = bus.bus_data;
+		return;
+	}
+	(*cores)[bus.bus_origid].bus_request.bus_addr = bus.bus_addr;
+	(*cores)[bus.bus_origid].bus_request.bus_cmd = BUS_FLUSH_CODE;
+	(*cores)[bus.bus_origid].bus_request.bus_data = main_mem[address_to_integer(bus.bus_addr)];
+	(*cores)[bus.bus_origid].bus_request.bus_origid = MEMORY_ORIGIN_CODE;
+	(*memory_request_cycle)[bus.bus_origid] = cycle;
+	(*valid_request) = VALID_REQUEST_CODE;
+}
+
+// Checks if there is any ready flush ready under main memory
+int available_memory_to_flush(int cycle, int valid_request[CORES_NUM], int memory_request_cycle[CORES_NUM]) // add support in multiple cores
+{
+	for (int i = 0; i < CORES_NUM; i++)
+		if (valid_request[i] == VALID_REQUEST_CODE && cycle - memory_request_cycle[i] >= 16)
+			return i;
+
+	return NO_VALUE_CODE;
+}
+
+// Cancel memory request in the main memory
+void cancel_memory_request(int core_num, int valid_request[CORES_NUM]) // add support in multiple cores
+{
+	valid_request[core_num] = UNVALID_REQUEST_CODE;
+}
+
+// Bus functions
+
+void update_bus(core cores[CORES_NUM], msi_bus* bus, int cycle, int* next_RR, int* valid_request[CORES_NUM], int memory_request_cycle[CORES_NUM])
+{
+	for (int i = 0; i < CORES_NUM; i++)
+	{
+		int loc = (i + (*next_RR)) % CORES_NUM;
+		if (cores[loc].bus_request_status == PENDING_SEND_CODE || cores[loc].bus_request_status == PENDING_WB_SEND_CODE)
+		{
+			*bus = cores[loc].bus_request;
+			*next_RR = (loc + 1) % CORES_NUM;
+			return;
+		}
+	}
+
+	// maybe we can add valid_request and memory_request_cycle inside core struct
+
+	int mem_to_flush = available_memory_to_flush(cycle, valid_request, memory_request_cycle);
+	if (mem_to_flush != NO_VALUE_CODE) // If no core want to send, check the main memory
+	{
+		*bus = cores[mem_to_flush].bus_request;
+		*valid_request[mem_to_flush] = UNVALID_REQUEST_CODE;
+	}
+	else
+		initialize_bus(&bus);
+}

@@ -58,7 +58,7 @@ void initialize_core(core *core, char *imem_filename)
 	initialize_core_regs(core);
 	parse_imem_file(core, imem_filename);
 	initialize_cache_rams(&(core->core_cache));
-	initialize_core_statistics(core); // yuval
+	initialize_core_statistics(core);
 	initialize_core_pipeline(core);
 	initialize_bus(&(core->bus_request));
 
@@ -449,4 +449,18 @@ void simulate_clock_cycle(core* core, FILE* trace_file)
 	update_stage_buffers(core);
 	core->clock_cycle_count++;
 	core->hazard = false;
+}
+
+bool all_cores_halt(core cores[CORES_NUM])
+{
+	int count = 0;
+
+	for (int i = 0; i < CORES_NUM; i++)
+		if (cores[i].core_halt)
+			count++;
+
+	if (count == CORES_NUM)
+		return true;
+
+	return false;
 }

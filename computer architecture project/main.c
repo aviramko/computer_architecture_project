@@ -8,30 +8,32 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hard_coded_data.h"
 #include "core.h"
 
 int main(int argc, char* argv[])
 {
-	core core0;// *core1 = NULL, *core2 = NULL, *core3 = NULL;
+	core cores[CORES_NUM];
 	msi_bus bus;
-	msi_bus empty_request;
-	int main_mem[MAIN_MEM_SIZE];
+	int main_mem[MAIN_MEM_SIZE], valid_request[CORES_NUM], memory_request_cycle[CORES_NUM];
 
-	int i, cycle = 0;
+	int cycle = 0;
+	int next_RR = 0;
 
-	initialize_main_mem(main_mem);
-	initialize_core(&core0, argv[1]);
+	initialize_main_mem(&main_mem, &valid_request, &memory_request_cycle);
+	for (int i = 0; i < CORES_NUM; i++)
+		initialize_core(&cores[i], argv[i + 1]);
 
 	FILE* fp_core0trace = fopen(argv[11], "w");
 
-	while (!core0.core_halt) // all cores halt
+	while (!all_cores_halt(cores)) // all cores halt
 	{
-		//update_bus(cycle);
+		update_bus(cores, &bus, cycle, &next_RR, &valid_request, &memory_request_cycle);
 
-		//main_memory_bus_snooper(core,cycle);
+		main_memory_bus_snooper(&cores, bus, cycle, &main_mem, &valid_request, &memory_request_cycle);
 
 		//for(i=0; i<CORES_NUM; i++)
-		simulate_clock_cycle(&core0, fp_core0trace);
+		simulate_clock_cycle(&cores[0], fp_core0trace);
 
 		//for(i=0; i<CORES_NUM; i++)
 		// core_bus_snooper

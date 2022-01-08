@@ -150,6 +150,7 @@
     <ClInclude Include="bus_mem.h" />
     <ClInclude Include="cache.h" />
     <ClInclude Include="core.h" />
+    <ClInclude Include="hard_coded_data.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
