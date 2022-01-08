@@ -19,6 +19,8 @@ typedef struct _cache cache;
 
 //#define BUS_FLUSH_CODE 3
 
+#define NO_STATE_CODE -1
+
 // Core Codes
 #define MEMORY_ORIGIN_CODE 4
 

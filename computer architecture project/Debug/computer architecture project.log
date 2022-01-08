@@ -1,32 +1,17 @@
 ﻿  bus_mem.c
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\bus_mem.c(75,92): warning C4047: '=': 'unsigned int' differs in levels of indirection from 'int *'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\bus_mem.c(78,39): warning C4047: '=': 'int *' differs in levels of indirection from 'int'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\bus_mem.c(114,67): warning C4047: 'function': 'int *' differs in levels of indirection from 'int **'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\bus_mem.c(114,54): warning C4024: 'available_memory_to_flush': different types for formal and actual parameter 2
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\bus_mem.c(121,22): warning C4047: 'function': 'msi_bus *' differs in levels of indirection from 'msi_bus **'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\bus_mem.c(121,18): warning C4024: 'initialize_bus': different types for formal and actual parameter 1
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\bus_mem.c(113,22): warning C4047: 'function': 'msi_bus *' differs in levels of indirection from 'msi_bus **'
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\bus_mem.c(113,18): warning C4024: 'initialize_bus': different types for formal and actual parameter 1
   cache.c
   core.c
   main.c
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(23,31): warning C4047: 'function': 'int **' differs in levels of indirection from 'int (*)[1048576]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(23,22): warning C4024: 'initialize_main_mem': different types for formal and actual parameter 1
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(23,47): warning C4047: 'function': 'int **' differs in levels of indirection from 'int (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(23,33): warning C4024: 'initialize_main_mem': different types for formal and actual parameter 2
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(23,70): warning C4047: 'function': 'int **' differs in levels of indirection from 'int (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(23,49): warning C4024: 'initialize_main_mem': different types for formal and actual parameter 3
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(31,58): warning C4047: 'function': 'int **' differs in levels of indirection from 'int (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(31,44): warning C4024: 'update_bus': different types for formal and actual parameter 5
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(31,81): warning C4047: 'function': 'int *' differs in levels of indirection from 'int (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(31,60): warning C4024: 'update_bus': different types for formal and actual parameter 6
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,33): warning C4047: 'function': 'core **' differs in levels of indirection from 'core (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,27): warning C4024: 'main_memory_bus_snooper': different types for formal and actual parameter 1
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,56): warning C4047: 'function': 'int **' differs in levels of indirection from 'int (*)[1048576]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,47): warning C4024: 'main_memory_bus_snooper': different types for formal and actual parameter 4
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,72): warning C4047: 'function': 'int **' differs in levels of indirection from 'int (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,58): warning C4024: 'main_memory_bus_snooper': different types for formal and actual parameter 5
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,95): warning C4047: 'function': 'int **' differs in levels of indirection from 'int (*)[4]'
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\main.c(33,74): warning C4024: 'main_memory_bus_snooper': different types for formal and actual parameter 6
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\main.c(23,30): warning C4047: 'function': 'int **' differs in levels of indirection from 'int [1048576]'
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\main.c(23,22): warning C4024: 'initialize_main_mem': different types for formal and actual parameter 1
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\main.c(23,45): warning C4047: 'function': 'int **' differs in levels of indirection from 'int [4]'
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\main.c(23,32): warning C4024: 'initialize_main_mem': different types for formal and actual parameter 2
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\main.c(23,67): warning C4047: 'function': 'int **' differs in levels of indirection from 'int [4]'
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\main.c(23,47): warning C4024: 'initialize_main_mem': different types for formal and actual parameter 3
   parser.c
   utils.c
+C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\computer architecture project\utils.c(33,37): warning C4477: 'fscanf' : format string '%x' requires an argument of type 'unsigned int *', but variadic argument 1 has type 'int **'
   Generating Code...
-  computer architecture project.vcxproj -> C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\Debug\computer architecture project.exe
+  computer architecture project.vcxproj -> C:\Users\יובל\Downloads\computer_architecture_project-master (1)\computer_architecture_project-master\Debug\computer architecture project.exe

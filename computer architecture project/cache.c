@@ -28,7 +28,7 @@ void initialize_cache_rams(cache *core_cache)
 		{
 			core_cache->tsram[i].tag = 0;
 			core_cache->tsram[i].MESI_state = invalid;
-			core_cache->tsram[i].valid = false;
+			core_cache->tsram[i].valid = true;
 		}
 	}
 }
@@ -57,16 +57,49 @@ void create_bus_request(core *core, int core_num, address bus_addr, int request_
 	}
 }
 
-//// int check_address_in_cache(core* cores, int core_num, address bus_addr)
-//// {
-//// 	if(cores[core_num].core_cache.tsram[bus_addr.index].valid != VALID_BLOCK_CODE || cores[core_num].core_cache.tsram[bus_addr.index].MESI_state == NO_VALUE_CODE)
-//
-//// }
-//
-//int get_MESI_state(core* cores, int core_num, address bus_addr)
+//int check_address_in_cache(core* cores, int core_num, address bus_addr)
 //{
-//	return cores[core_num].tsram[bus_addr.index].MESI_state;
+//	if(cores[core_num].core_cache.tsram[bus_addr.index].valid != VALID_BLOCK_CODE || cores[core_num].core_cache.tsram[bus_addr.index].MESI_state == NO_VALUE_CODE)
+//
 //}
+
+int get_cache_data(core* core, address bus_addr)
+{
+	return core->core_cache.dsram[bus_addr.index];
+}
+
+void clean_cache_data(core* core, address bus_addr)
+{
+	core->core_cache.dsram[bus_addr.index] = EMPTY_DATA_FIELD;
+	core->core_cache.tsram->tag = EMPTY_DATA_FIELD;
+	core->core_cache.tsram->MESI_state = EMPTY_DATA_FIELD;
+	core->core_cache.tsram->next_MESI_state = EMPTY_DATA_FIELD;
+	core->core_cache.tsram->valid = true;
+}
+
+/*void update_cache_data(core* core, address bus_addr, int data)
+{
+	core->core_cache.dsram[bus_addr.index] = data;
+}*/
+
+void add_cache_data(core* core, address bus_addr, int data, int state)
+{
+	core->core_cache.dsram[bus_addr.index] = data;
+	core->core_cache.tsram[bus_addr.index].tag = bus_addr.tag;
+	core->core_cache.tsram[bus_addr.index].MESI_state = state;
+	core->core_cache.tsram[bus_addr.index].next_MESI_state = NO_STATE_CODE;
+}
+
+int get_MESI_state(core* core, address bus_addr)
+{
+	return core->core_cache.tsram[bus_addr.index].MESI_state;
+}
+
+void update_MESI_state(core* core, address bus_addr, int state)
+{
+	core->core_cache.tsram[bus_addr.index].MESI_state = state;
+	core->core_cache.tsram[bus_addr.index].next_MESI_state = NO_STATE_CODE;
+}
 
 bool mem_block_search(tsram_entry *tsram, int index, int tag)
 {

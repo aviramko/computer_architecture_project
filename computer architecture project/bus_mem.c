@@ -8,23 +8,23 @@
 #include "bus_mem.h"
 #include "utils.h"
 
-void initialize_main_mem(int *main_mem, int *valid_request, int *memory_request_cycle)
+void initialize_main_mem(int** main_mem, int** valid_request, int** memory_request_cycle)
 {
 	int i;
 
 	for (i = 0; i < CORES_NUM; i++)
 	{
-		valid_request[i] = UNVALID_REQUEST_CODE;
-		memory_request_cycle[i] = 0;
+		(*valid_request)[i] = UNVALID_REQUEST_CODE;
+		(*memory_request_cycle)[i] = 0;
 	}
 
 	// maybe initialize empty request
 
 	for (i = 0; i < MAIN_MEM_SIZE; i++)
-		main_mem[i] = EMPTY_DATA_FIELD;
+		(*main_mem)[i] = EMPTY_DATA_FIELD;
 
 
-	initialize_array_from_file("memin.txt", *main_mem, MAIN_MEM_SIZE);
+	initialize_array_from_file("memin.txt", main_mem, MAIN_MEM_SIZE);
 }
 
 void initialize_bus(msi_bus *bus)
@@ -64,9 +64,9 @@ void main_memory_bus_snooper(core *cores, msi_bus bus, int cycle, int *main_mem,
 	cores[bus.bus_origid].bus_request.bus_addr = bus.bus_addr;
 	cores[bus.bus_origid].bus_request.bus_cmd = BUS_FLUSH_CODE;
 	cores[bus.bus_origid].bus_request.bus_data = main_mem[address_to_integer(bus.bus_addr)];
-	cores[bus.bus_origid].bus_request.bus_origid = MEMORY_ORIGIN_CODE;
+	//cores[bus.bus_origid].bus_request.bus_origid = MEMORY_ORIGIN_CODE;
 	memory_request_cycle[bus.bus_origid] = cycle;
-	*valid_request = VALID_REQUEST_CODE;
+	valid_request[bus.bus_origid] = VALID_REQUEST_CODE;
 }
 
 // Checks if there is any flush ready under main memory
