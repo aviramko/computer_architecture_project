@@ -1,11 +1,12 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_DEPRECATE
 
-#include <stdio.h>
-#include <stdlib.h>
+//#include <stdio.h>
+//#include <stdlib.h>
 
+//#include "core.h"
 #include "bus_mem.h"
-#include "core.h"
+#include "utils.h"
 
 void initialize_main_mem(int *main_mem)
 {

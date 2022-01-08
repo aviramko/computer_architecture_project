@@ -1,8 +1,12 @@
-#ifndef CACHE_HEADER
-#define CACHE_HEADER
+#ifndef _CACHE_HEADER_
+#define _CACHE_HEADER_
 
 #include <stdbool.h>
-#include "core.h"
+
+typedef struct _cache cache;
+
+#include "bus_mem.h"
+
 
 #define DSRAM_SIZE 256
 #define BLOCK_SIZE 4
@@ -32,10 +36,12 @@ typedef struct tsram_entry {
 	bool valid;
 } tsram_entry;
 
-typedef struct cache {
+struct _cache {
 	tsram_entry tsram[TSRAM_SIZE];
 	int dsram[DSRAM_SIZE];
-} cache;
+};
+
+#include "core.h"
 
 void initialize_cache_rams(cache *core_cache);
 void read_mem(core *core);

@@ -1,6 +1,22 @@
 #ifndef BUS_MEM_HEADER
 #define BUS_MEM_HEADER
 
+// Bus Codes
+#define BUS_NO_CMD_CODE 0
+#define BUS_RD_CODE 1
+#define BUS_RDX_CODE 2
+#define BUS_FLUSH_CODE 3
+
+#define NO_BUS_REQUEST_CODE 0
+#define PENDING_SEND_CODE 1
+#define WAITING_FLUSH_CODE 2
+#define PENDING_WB_SEND_CODE 3
+#define WB_COMPLETED_CODE 4
+
+#define EMPTY_DATA_FIELD 0
+
+#define MAIN_MEM_SIZE 1048576 // 2^20
+
 typedef enum bus_requests {
 	no_cmd,
 	bus_rd,

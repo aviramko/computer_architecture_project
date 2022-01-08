@@ -1,7 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
+//#include <stdio.h>
+//#include <stdlib.h>
 
 #include "cache.h"
+//#include "core.h"
 
 // Gets tsram entry and convert it to a line for future use
 // bits 0:11 for tag, bits 13:12 for MESI state.
@@ -22,7 +23,7 @@ void initialize_cache_rams(cache *core_cache)
 	while (i < DSRAM_SIZE)
 	{
 		core_cache->dsram[i] = 0;
-		if (i < (TSRAM_SIZE - 1))
+		if (i < TSRAM_SIZE)
 		{
 			core_cache->tsram[i].tag = 0;
 			core_cache->tsram[i].MESI_state = invalid;
@@ -107,4 +108,9 @@ void read_mem(core *core)
 	case (modified):
 		break;
 	}
+}
+
+void write_mem(core *core)
+{
+	int i = 0;
 }

@@ -1,9 +1,10 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_DEPRECATE
 
-#include <stdio.h>
+//#include <stdio.h>
 #include <stdlib.h>
 
+#include "parser.h"
 #include "core.h"
 
 #define TRACE_FILE_LINE_LEN 200	// more than enough
@@ -330,10 +331,10 @@ void memory(core* core)
 	{
 		read_mem(core);
 	}
-	//else if (current_instruction.opcode == sw)
-	//{
-	//
-	//}
+	else if (current_instruction.opcode == sw)
+	{
+		write_mem(core);
+	}
 
 	core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
 	core->core_pipeline[MEM_WB].new_ALU_output = core->core_pipeline[EX_MEM].current_ALU_output;

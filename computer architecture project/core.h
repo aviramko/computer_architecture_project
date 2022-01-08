@@ -1,12 +1,15 @@
-#ifndef CORE_HEADER
-#define CORE_HEADER
+#ifndef _CORE_HEADER_
+#define _CORE_HEADER_
 
 #include <stdio.h>
 #include <stdbool.h>
 
+typedef struct _core core;
+
 #include "cache.h"
 #include "bus_mem.h"
-#include "parser.h"
+#include "utils.h"
+
 
 #define NUM_OF_REGS 16
 #define MAX_IMEM_LINES 1024
@@ -17,22 +20,9 @@
 #define VALID_REQUEST_CODE 1 // yuval
 
 #define CORES_NUM 4
-#define EMPTY_DATA_FIELD 0
-#define BUS_FLUSH_CODE 3
+
+//#define BUS_FLUSH_CODE 3
 #define IMEM_LINES_NUM 1024
-#define MAIN_MEM_SIZE 1048576 // 2^20
-
-// Bus Codes
-#define BUS_NO_CMD_CODE 0
-#define BUS_RD_CODE 1
-#define BUS_RDX_CODE 2
-#define BUS_FLUSH_CODE 3
-
-#define NO_BUS_REQUEST_CODE 0
-#define PENDING_SEND_CODE 1
-#define WAITING_FLUSH_CODE 2
-#define PENDING_WB_SEND_CODE 3
-#define WB_COMPLETED_CODE 4
 
 // Core Codes
 #define MEMORY_ORIGIN_CODE 4
@@ -130,7 +120,8 @@ typedef struct statistics
 
 //////////////////////////////////////
 
-typedef struct core {
+struct _core {
+	cache core_cache;
 	instruction core_imem[MAX_IMEM_LINES];
 	statistics stat; // yuval
 	msi_bus bus_request; // yuval
@@ -142,12 +133,11 @@ typedef struct core {
 	int next_PC;
 	int fetch_old_PC;
 	pipeline_stage core_pipeline[PIPELINE_BUFFERS_NUM];
-	cache core_cache;
 	bool hazard;
 	bool core_halt;
 	bool halt_PC;
 	char *imem_file;
-} core;
+};
 
 
 void initialize_core(core *core, char *imem_filename);
