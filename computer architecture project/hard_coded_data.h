@@ -6,6 +6,8 @@
 typedef struct _core core;
 typedef struct _cache cache;
 
+#define MISS_CODE -1
+
 #define SUCCESS_CODE 0 // yuval
 #define ERROR_CODE -1 //yuval
 
@@ -55,6 +57,8 @@ typedef struct _cache cache;
 // Blocks Status Codes
 #define VALID_BLOCK_CODE 0
 #define DIRTY_BLOCK_CODE 1
+
+#define ARGS_EXPECTED_NUM 28
 
 #define DEFAULT_FILE_IMEM0 "imem0.txt"
 #define DEFAULT_FILE_IMEM1 "imem1.txt"
@@ -147,7 +151,7 @@ typedef enum MESI_states {
 } MESI_states;
 
 typedef struct tsram_entry {
-	unsigned int tag : 12;
+	unsigned int tag;
 	unsigned int MESI_state;
 	unsigned int next_MESI_state;
 	bool valid;
@@ -204,7 +208,7 @@ typedef struct MSI_bus
 	address bus_addr;
 	unsigned int bus_cmd : 2;
 	unsigned int bus_origid : 3;
-	bool busy;
+	int cycles_left;
 } msi_bus;
 
 typedef struct MSI_bus_FF {

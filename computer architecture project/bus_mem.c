@@ -112,3 +112,44 @@ void update_bus(core *cores, msi_bus* bus, int cycle, int* next_RR, int *valid_r
 	else
 		initialize_bus(&bus);
 }
+
+
+int find_xaction_origin(int *valid_request)
+{
+	for (int i = 0; i < CORES_NUM; i++)
+		if (valid_request[i] == VALID_REQUEST_CODE)
+			return i;
+}
+
+void update_bus(core *cores, msi_bus* bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle, int *main_mem)
+{
+
+	// let bus cycles, if needed, to be promoted.
+	// check if xaction ended
+	if (bus->cycles_left == 0)
+	{
+		bus->bus_cmd = BUS_NO_CMD_CODE;
+	}
+
+	if (bus->cycles_left == 4)
+	{
+		// load bus with flush request from main memory
+		bus->bus_origid = MEMORY_ORIGIN_CODE;
+		bus->bus_cmd = BUS_FLUSH_CODE;
+		address word_address = bus->bus_addr;
+		int address = address_to_integer(word_address);
+		int aligned_address = aligned_address - (aligned_address % 4);
+		bus->bus_addr.index = aligned_address & 0xFF;
+		bus->bus_addr.tag = (aligned_address >> 8) & 0xFFF;
+		bus->bus_data = main_mem[address_to_integer(bus->bus_addr)];
+		return;
+	}
+
+	if (bus->bus_cmd != BUS_NO_CMD_CODE)
+	{
+		return;
+	}
+
+
+
+}

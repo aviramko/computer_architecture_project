@@ -101,87 +101,143 @@ void update_MESI_state(core* core, address bus_addr, int state)
 	core->core_cache.tsram[bus_addr.index].next_MESI_state = NO_STATE_CODE;
 }
 
-bool mem_block_search(tsram_entry *tsram, int index, int tag)
+//int generate_tsram_index(int dsram_index)
+//{
+//	return dsram_index / 4;
+//}
+
+bool mem_block_search(tsram_entry *tsram, int tsram_index, int tag)
 {
-	bool block_valid = tsram[index].valid;
+	bool block_valid = tsram[tsram_index].valid;
 	if (!block_valid)
 	{
-		tsram[index].MESI_state = invalid;
+		tsram[tsram_index].MESI_state = invalid;
 		return false;
 	}
 	else {
-		if (tsram[index].tag == tag)
+		if (tsram[tsram_index].tag == tag)
 		{
 			return true;
 		}
 		else
 		{
-			tsram[index].MESI_state = invalid;
+			//tsram[index].MESI_state = invalid;
 			return false;
 		}
 	}
 }
 
-void core_snoop_bus(core *core)
-{
-	for (int i = 0; i < CORES_NUM; i++)
-	{
-
-	}
-}
-
-void read_mem(core *core)
+int read_mem(core *core, int *main_mem)
 {
 	int read_address = core->core_pipeline[EX_MEM].current_ALU_output;
 	int index = read_address & 0xFF;
 	int tag = (read_address >> 8) & 0xFFF;
+	int tsram_index = index / 4;
 
-	bool block_in_cache = mem_block_search(core->core_cache.tsram, index, tag);
+	bool block_in_cache = mem_block_search(core->core_cache.tsram, tsram_index, tag);
 	address address_format = { index, tag };
 
-	switch (core->core_cache.tsram[index].MESI_state)
+	switch (core->core_cache.tsram[tsram_index].MESI_state)
 	{
 	case (invalid):
 		create_bus_request(core, 0, address_format, bus_rd, 0x0);
+		return MISS_CODE;	// miss
 		// return indication to wait for the bus request
 		break;
+
 	case (shared):
-		core->core_cache.tsram[index].next_MESI_state = shared;
+		if (block_in_cache)
+		{
+			core->core_cache.tsram[tsram_index].next_MESI_state = shared;
+			return core->core_cache.dsram[index];	//hit
+		}
+		else
+		{
+			create_bus_request(core, 0, address_format, bus_rd, 0x0);	//miss
+			return MISS_CODE;
+		}
 		break;
+
 	case (exclusive):
-		core->core_cache.tsram[index].next_MESI_state = exclusive;
+		if (block_in_cache)
+		{
+			core->core_cache.tsram[tsram_index].next_MESI_state = exclusive;
+			return core->core_cache.dsram[index];	//hit
+		}
+		else
+		{
+			create_bus_request(core, 0, address_format, bus_rd, 0x0);	//miss
+			return MISS_CODE;
+		}
 		break;
+
 	case (modified):
-		core->core_cache.tsram[index].next_MESI_state = modified;
+		if (block_in_cache)
+		{
+			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+			return core->core_cache.dsram[index];	//hit
+		}
+		else
+		{
+			// flush old data (no need to wait 16 clock cycles)
+			int block_base_index = index - index % 4;
+			int block_tag = core->core_cache.tsram[block_base_index / 4].tag;
+			int main_mem_address = (block_tag << 8) | (block_base_index);
+			for (int i = 0; i < BLOCK_SIZE; i++)
+			{
+				main_mem[main_mem_address + i] = core->core_cache.dsram[block_base_index + i];
+			}
+
+			create_bus_request(core, 0, address_format, bus_rd, 0x0);	//miss
+			return MISS_CODE;
+		}
+		//core->core_cache.tsram[index].next_MESI_state = modified;
+		//return core->core_cache.dsram[index];	//hit
 		break;
 	}
+	
 }
 
-void write_mem(core *core)
+int write_mem(core *core)
 {
 	int read_address = core->core_pipeline[EX_MEM].current_ALU_output;
 	int index = read_address & 0xFF;
 	int tag = (read_address >> 8) & 0xFFF;
+	int tsram_index = index / 4;
 
-	bool block_in_cache = mem_block_search(core->core_cache.tsram, index, tag);
+	bool block_in_cache = mem_block_search(core->core_cache.tsram, tsram_index, tag);
 	address address_format = { index, tag };
 
-	switch (core->core_cache.tsram[index].MESI_state)
+	switch (core->core_cache.tsram[tsram_index].MESI_state)
 	{
 	case (invalid):
 		create_bus_request(core, 0, address_format, bus_rdx, core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd]);
-		core->core_cache.tsram[index].next_MESI_state = modified;
+		core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+		return MISS_CODE;
 		break;
+
 	case (shared):
-		create_bus_request(core, 0, address_format, bus_rdx, core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd]);
-		core->core_cache.tsram[index].next_MESI_state = modified;
+		if (block_in_cache)
+		{
+			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit, write and move mesi to modified
+			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+			create_bus_request(core, 0, address_format, bus_rdx, core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd]);
+			return MISS_CODE; // returned miss because we still need to stall. Officialy, it's not a miss
+		}
+		else
+		{
+			create_bus_request(core, 0, address_format, bus_rdx, core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd]);	// let other cores know 
+			return MISS_CODE;
+		}
 		break;
+
 	case (exclusive):
-		core->core_cache.tsram[index].next_MESI_state = modified;
+		core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 		//no need for bus request
 		break;
+
 	case (modified):
-		core->core_cache.tsram[index].next_MESI_state = modified;
+		core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 		//no need for bus request
 		break;
 	}
