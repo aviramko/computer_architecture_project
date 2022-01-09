@@ -8,20 +8,20 @@
 #include "bus_mem.h"
 #include "utils.h"
 
-void initialize_main_mem(int** main_mem, int** valid_request, int** memory_request_cycle)
+void initialize_main_mem(int* main_mem, int* valid_request, int* memory_request_cycle)
 {
 	int i;
 
 	for (i = 0; i < CORES_NUM; i++)
 	{
-		(*valid_request)[i] = UNVALID_REQUEST_CODE;
-		(*memory_request_cycle)[i] = 0;
+		valid_request[i] = UNVALID_REQUEST_CODE;
+		memory_request_cycle[i] = 0;
 	}
 
 	// maybe initialize empty request
 
 	for (i = 0; i < MAIN_MEM_SIZE; i++)
-		(*main_mem)[i] = EMPTY_DATA_FIELD;
+		main_mem[i] = EMPTY_DATA_FIELD;
 
 
 	initialize_array_from_file("memin.txt", main_mem, MAIN_MEM_SIZE);
@@ -87,31 +87,31 @@ void cancel_memory_request(int core_num, int *valid_request) // add support in m
 
 // Bus functions
 
-void update_bus(core *cores, msi_bus* bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle)
-{
-	//check bus availability first
-	for (int i = 0; i < CORES_NUM; i++)
-	{
-		int loc = (i + (*next_RR)) % CORES_NUM;
-		if (cores[loc].bus_request_status == PENDING_SEND_CODE || cores[loc].bus_request_status == PENDING_WB_SEND_CODE)
-		{
-			*bus = cores[loc].bus_request;
-			*next_RR = (loc + 1) % CORES_NUM;
-			return;
-		}
-	}
-
-	// maybe we can add valid_request and memory_request_cycle inside core struct
-
-	int mem_to_flush = available_memory_to_flush(cycle, valid_request, memory_request_cycle);
-	if (mem_to_flush != NO_VALUE_CODE) // If no core want to send, check the main memory
-	{
-		*bus = cores[mem_to_flush].bus_request;
-		valid_request[mem_to_flush] = UNVALID_REQUEST_CODE;
-	}
-	else
-		initialize_bus(&bus);
-}
+//void update_bus(core *cores, msi_bus* bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle)
+//{
+//	//check bus availability first
+//	for (int i = 0; i < CORES_NUM; i++)
+//	{
+//		int loc = (i + (*next_RR)) % CORES_NUM;
+//		if (cores[loc].bus_request_status == PENDING_SEND_CODE || cores[loc].bus_request_status == PENDING_WB_SEND_CODE)
+//		{
+//			*bus = cores[loc].bus_request;
+//			*next_RR = (loc + 1) % CORES_NUM;
+//			return;
+//		}
+//	}
+//
+//	// maybe we can add valid_request and memory_request_cycle inside core struct
+//
+//	int mem_to_flush = available_memory_to_flush(cycle, valid_request, memory_request_cycle);
+//	if (mem_to_flush != NO_VALUE_CODE) // If no core want to send, check the main memory
+//	{
+//		*bus = cores[mem_to_flush].bus_request;
+//		valid_request[mem_to_flush] = UNVALID_REQUEST_CODE;
+//	}
+//	else
+//		initialize_bus(&bus);
+//}
 
 
 int find_xaction_origin(int *valid_request)
@@ -123,29 +123,65 @@ int find_xaction_origin(int *valid_request)
 
 void update_bus(core *cores, msi_bus* bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle, int *main_mem)
 {
+	// first check if bus is busy
 
-	// let bus cycles, if needed, to be promoted.
+	// let bus cycles left, if needed, to be promoted.
 	// check if xaction ended
-	if (bus->cycles_left == 0)
+	if ((bus->cycles_left == 0) && (bus->bus_cmd != no_cmd))	// set default for next cycle
 	{
-		bus->bus_cmd = BUS_NO_CMD_CODE;
+		bus->bus_cmd = no_cmd;
 	}
 
-	if (bus->cycles_left == 4)
+	if (bus->cycles_left == 5) // next cycle is beginning of flush from main_mem
 	{
 		// load bus with flush request from main memory
-		bus->bus_origid = MEMORY_ORIGIN_CODE;
-		bus->bus_cmd = BUS_FLUSH_CODE;
+		bus->bus_origid = main_mem_origid;
+		bus->bus_cmd = flush;
 		address word_address = bus->bus_addr;
-		int address = address_to_integer(word_address);
-		int aligned_address = aligned_address - (aligned_address % 4);
+		int integer_address = address_to_integer(word_address);
+		int aligned_address = integer_address - (integer_address % 4);
 		bus->bus_addr.index = aligned_address & 0xFF;
 		bus->bus_addr.tag = (aligned_address >> 8) & 0xFFF;
 		bus->bus_data = main_mem[address_to_integer(bus->bus_addr)];
 		return;
 	}
+	
+	int core, i;
+	//let arbitration take place here. Treat the state in which none of the cores wants to do something
+	for (i = 0; i < CORES_NUM; i++)
+	{
+		core = (i + (*next_RR)) % CORES_NUM;	// go cylic and allow Round-Robin arbitration
+		if (cores[core].bus_request.bus_cmd != no_cmd)
+		{
+			break;
+		}
+	}
+	if (i == CORES_NUM)	// none of the cores request the bus in this clock cycle, no need to update_bus
+	{
+		return;
+	}
+	// integer core now holds the core that won arbitration. 
+	
+	//now let the cores snoop the request.
+	// for BusRdX:
+	// 1. if other $ has the block Modified in it, generate Flush xaction from this core and update main_mem at the same time. switch the state of this block to Invalid.
+	//	  now, don't go on bus with this xaction! switch this xaction of BusRdX to Flush. main_mem should snoop this xaction and update its contents.
+	//    main_mem is supposed to snoop at some point and find out that bus_origid of the Flush cmd is not his, so it has to be updated too!
+	// 2. if other $ has the block Exclusive in it, invalidate this block (no actual need to Flush) at this function! you have to execute transition E->I at this cycle.
+	// 3. if other $ has the block Shared in it, invalidate this block (no actual need to Flush) at this function! you have to execute transition S->I at this cycle.
 
-	if (bus->bus_cmd != BUS_NO_CMD_CODE)
+	// for BusRd:
+	// first initialize bus_shared to '0'. check if any of the caches has the block in it, and if so raise bus_shared to '1'. 
+	// 1. if other $ has the block Modified in it, generate Flush xaction from this core and update main_mem at the same time. switch the state of this block to Invalid.
+	//	  now, don't go on bus with this xaction! switch this xaction of BusRdX to Flush. main_mem should snoop this xaction and update its contents.
+	//    main_mem is supposed to snoop at some point and find out that bus_origid of the Flush cmd is not his, so it has to be updated too!
+	// 2. if other $ has the block Exclusive in it, make transition of this block: E->S at the very same clock cycle (within the scope of the function). no need to flush.
+	//    it's very important that the transition of the mesi state will occur instantly!
+	// 3. if other $ has the block Shared in it, next mesi_state will be the same (Shared), no flush is neeeded.
+
+	//now let main_mem snoop the request.
+
+	if (bus->bus_cmd != no_cmd)
 	{
 		return;
 	}

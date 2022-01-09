@@ -47,6 +47,8 @@ void initialize_core_pipeline(core *core)
 		core->core_pipeline[i].valid = false;
 		core->core_pipeline[i].current_ALU_output = 0;
 		core->core_pipeline[i].new_ALU_output = 0;
+		core->core_pipeline[i].current_mem_output = 0;
+		core->core_pipeline[i].new_mem_output = 0;
 		core->core_pipeline[i].halt = false;
 		core->core_pipeline[i].current_instruction.stalled = false;
 		core->core_pipeline[i].new_instruction.stalled = false;
@@ -68,6 +70,7 @@ void initialize_core(core *core, char *imem_filename)
 	core->hazard = false;
 	core->halt_PC = false;
 	core->bus_request_status = NO_BUS_REQUEST_CODE;
+	core->mem_stall = false;
 }
 
 bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
@@ -304,7 +307,7 @@ void execute(core* core)
 	core->core_pipeline[EX_MEM].new_ALU_output = ALU_output;
 }
 
-void memory(core* core)
+void memory(core* core, int *main_mem)
 {
 	bool valid_stage = check_stage_validity(core, EX_MEM);
 	instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
@@ -329,11 +332,34 @@ void memory(core* core)
 	// memory treatment
 	if (current_instruction.opcode == lw)
 	{
-		read_mem(core);
+		// wrap in big if that asks if read access was already done or something like that
+		int read_res = read_mem(core, main_mem);
+		if (read_res == MISS_CODE)
+		{
+			//stall core
+			//core->next_PC -= 1;		// not sure if need to add old PC if after branch
+			//core->core_pipeline[EX_MEM].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
+			//core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[MEM_WB].current_instruction;
+			//core->core_pipeline[MEM_WB].new_instruction.stalled = true;
+			core->core_pipeline[MEM_WB].current_instruction.stalled = true;
+			core->mem_stall = true;
+			return;
+		}
+		else 
+		{
+			core->core_pipeline[MEM_WB].new_mem_output = read_res; // propogate read result to next stage if access was hit
+		}
 	}
 	else if (current_instruction.opcode == sw)
 	{
-		write_mem(core);
+		int write_result = write_mem(core);
+		if (write_result == MISS_CODE)
+		{
+			// stall core
+			core->core_pipeline[MEM_WB].current_instruction.stalled = true;
+			core->mem_stall = true;
+			return;
+		}
 	}
 
 	core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
@@ -373,7 +399,14 @@ void write_back(core* core)
 	{
 		return;
 	}
-	core->core_registers[reg] = core->core_pipeline[MEM_WB].current_ALU_output;
+
+	if (current_instruction.opcode == lw)	// reg-memory operation
+	{
+		core->core_registers[reg] = core->core_pipeline[MEM_WB].current_mem_output;
+		return;
+	}
+
+	core->core_registers[reg] = core->core_pipeline[MEM_WB].current_ALU_output;	// reg-reg operation
 }
 
 void update_stage_buffers(core* core)
@@ -387,6 +420,9 @@ void update_stage_buffers(core* core)
 	// update ALU_output
 	core->core_pipeline[EX_MEM].current_ALU_output = core->core_pipeline[EX_MEM].new_ALU_output;
 	core->core_pipeline[MEM_WB].current_ALU_output = core->core_pipeline[MEM_WB].new_ALU_output;
+
+	// update mem_output
+	core->core_pipeline[MEM_WB].current_mem_output = core->core_pipeline[MEM_WB].new_mem_output;
 }
 
 void format_stage_trace(bool valid, bool stalled, bool halt, char* str, int num)
@@ -436,14 +472,19 @@ void copy_regs(core* core)
 	}
 }
 
-void simulate_clock_cycle(core* core, FILE* trace_file)
+void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem)
 {
+	if (core->mem_stall)
+	{
+		write_trace(core, trace_file);
+		core->clock_cycle_count++;
+		return; // in this case, stall core completely, only write its trace
+	}
 	copy_regs(core);				// snapshot core regs at the beginning of the clock cycle
-	//check_hazards(core);			// check clock cycle hazards
 	fetch(core);
 	decode(core);
 	execute(core);
-	memory(core);
+	memory(core, main_mem);
 	write_back(core);
 	write_trace(core, trace_file);
 	update_stage_buffers(core);

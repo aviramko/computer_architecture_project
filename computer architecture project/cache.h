@@ -10,7 +10,7 @@
 #include "core.h"
 
 void initialize_cache_rams(cache *core_cache);
-void read_mem(core *core);
-void write_mem(core *core);
+int read_mem(core *core, int *main_mem);
+int write_mem(core *core);
 
 #endif // !CACHE_HEADER

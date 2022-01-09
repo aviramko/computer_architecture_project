@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-typedef struct _core core;
+
 typedef struct _cache cache;
 
 #define MISS_CODE -1
@@ -143,6 +143,14 @@ typedef enum bus_requests {
 	flush
 } bus_requests;
 
+typedef enum _bus_origid {
+	core0_origid,
+	core1_origid,
+	core2_origid,
+	core3_origid,
+	main_mem_origid
+} bus_origid;
+
 typedef enum MESI_states {
 	invalid,
 	shared,
@@ -185,6 +193,8 @@ typedef struct pipeline_stage {
 	bool valid;
 	int current_ALU_output;
 	int new_ALU_output;
+	int new_mem_output;
+	int current_mem_output;
 	bool halt;
 } pipeline_stage;
 
@@ -232,7 +242,9 @@ struct _core {
 	bool hazard;
 	bool core_halt;
 	bool halt_PC;
+	bool mem_stall;
 	char* imem_file;
 };
+typedef struct _core core;
 
 #endif // !HARD_CODED_DATA_HEADER
