@@ -12,10 +12,6 @@
 
 //////////////////////// yuval
 
-//int valid_request;
-//int memory_request_cycle; // change to multiple cores
-//int main_mem[MAIN_MEM_SIZE];
-
 void initialize_core_statistics(core* core)
 {
 	core->stat.cycles = 1;

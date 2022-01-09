@@ -12,5 +12,6 @@
 void initialize_cache_rams(cache *core_cache);
 int read_mem(core *core, int *main_mem);
 int write_mem(core *core);
+bool core_snoop_bus(core *core, int core_num, msi_bus *bus, bool *shared_flags);
 
 #endif // !CACHE_HEADER

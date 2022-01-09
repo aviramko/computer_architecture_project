@@ -1,9 +1,6 @@
-//#include <stdio.h>
-//#include <stdlib.h>
 
 #include "cache.h"
 #include "bus_mem.h"
-//#include "core.h"
 
 // Gets tsram entry and convert it to a line for future use
 // bits 0:11 for tag, bits 13:12 for MESI state.
@@ -28,7 +25,7 @@ void initialize_cache_rams(cache *core_cache)
 		{
 			core_cache->tsram[i].tag = 0;
 			core_cache->tsram[i].MESI_state = invalid;
-			core_cache->tsram[i].valid = true;
+			core_cache->tsram[i].valid = false;
 		}
 		i++;
 	}
@@ -37,8 +34,8 @@ void initialize_cache_rams(cache *core_cache)
 // Creates the bus request by given values
 void create_bus_request(core *core, int core_num, address bus_addr, int request_type, int data)
 {
-	if (core->bus_request_status != NO_BUS_REQUEST_CODE)
-		return;
+	//if (core->bus_request_status != NO_BUS_REQUEST_CODE)
+	//	return;
 	
 	// Puts the request in core.
 	core->bus_request.bus_origid = core_num;
@@ -47,15 +44,15 @@ void create_bus_request(core *core, int core_num, address bus_addr, int request_
 	core->bus_request.bus_data = data;
 	core->bus_request_status = PENDING_SEND_CODE;
 
-	if (request_type == BUS_FLUSH_CODE) // WB
-	{
-		address address_wb;
-		address_wb.index = bus_addr.index;
-		address_wb.tag = core->core_cache.tsram[bus_addr.index].tag;
-		core->bus_request.bus_addr = address_wb;
-		core->bus_request_status = PENDING_WB_SEND_CODE;
-		core->bus_request.bus_data = core->core_cache.dsram[bus_addr.index];
-	}
+	//if (request_type == BUS_FLUSH_CODE) // WB
+	//{
+	//	address address_wb;
+	//	address_wb.index = bus_addr.index;
+	//	address_wb.tag = core->core_cache.tsram[bus_addr.index].tag;
+	//	core->bus_request.bus_addr = address_wb;
+	//	core->bus_request_status = PENDING_WB_SEND_CODE;
+	//	core->bus_request.bus_data = core->core_cache.dsram[bus_addr.index];
+	//}
 }
 
 
@@ -199,7 +196,7 @@ int write_mem(core *core)
 			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit, write and move mesi to modified. should we write now or wait for busrdx?
 			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 			create_bus_request(core, 0, address_format, bus_rdx, 0x0);
-			return MISS_CODE; // returned miss because we still need to stall. Officialy, it's not a miss. Check again - should we wait for BusRdX to finish?
+			return MISS_CODE; // returned miss because we still need to stall. Officialy, it's not a miss, but it's recommended to wait
 		}
 		else
 		{
@@ -210,6 +207,9 @@ int write_mem(core *core)
 		break;
 
 	case (exclusive):
+
+		//finish adding miss or hit states
+
 		core->core_cache.tsram[tsram_index].MESI_state = modified;
 		core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
 		//no need for bus request
@@ -217,6 +217,9 @@ int write_mem(core *core)
 		break;
 
 	case (modified):
+
+		//finish adding miss or hit states
+
 		core->core_cache.tsram[tsram_index].MESI_state = modified;
 		core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
 		//no need for bus request
@@ -273,7 +276,72 @@ void core_bus_snooper(core *core, int core_num, msi_bus *bus)
 	}
 }
 
-void core_snoop_bus()
+bool core_snoop_bus(core *core, int core_num, msi_bus *bus, bool *shared_flags)
 {
+	msi_bus pending_request = core->bus_request;
 
+	int dsram_index = pending_request.bus_addr.index;
+	int tsram_index = dsram_index / BLOCK_SIZE;
+	tsram_entry core_tsram_entry = core->core_cache.tsram[tsram_index];
+	int core_tag = core_tsram_entry.tag;
+	int request_tag = pending_request.bus_addr.tag;
+
+	if ((core_tag != request_tag) && core_tsram_entry.valid)	// requested block is not in this core's cache
+	{
+		return original_request;	// continue (for this core) with original xaction
+	}
+
+	if (core_tsram_entry.MESI_state == invalid)
+	{
+		return original_request;	// block is invalid in other cache that has it. continue (for this core) with original xaction
+	}
+
+	if (pending_request.bus_cmd == bus_rdx)
+	{
+		switch (core_tsram_entry.MESI_state)
+		{
+		case (modified):
+			core->core_cache.tsram[tsram_index].MESI_state = invalid;
+			return flush_request;	// flush for this core
+			break;
+		case (exclusive):
+		case (shared):
+			core->core_cache.tsram[tsram_index].MESI_state = invalid;
+			return original_request;
+			break;
+		}
+	}
+	else
+	{
+		shared_flags[core_num] = true;
+		switch (core_tsram_entry.MESI_state)
+		{
+		case (modified):
+			core->core_cache.tsram[tsram_index].MESI_state = shared;
+			return flush_request;	// flush for this core
+			break;
+		case (exclusive):
+		case (shared):
+			core->core_cache.tsram[tsram_index].MESI_state = shared;
+			return original_request;
+			break;
+		}
+	}
 }
+
+//now let the cores snoop the request.
+	// for BusRdX:
+	// 1. if other cache has the block Modified in it, generate Flush xaction from this core and update main_mem at the same time. switch the state of this block to Invalid.
+	//	  now, don't go on bus with this xaction! switch this xaction of BusRdX to Flush. main_mem should snoop this xaction and update its contents.
+	//    main_mem is supposed to snoop at some point and find out that bus_origid of the Flush cmd is not his, so it has to be updated too!
+	// 2. if other cache has the block Exclusive in it, invalidate this block (no actual need to Flush) at this function! you have to execute transition E->I at this cycle.
+	// 3. if other cache has the block Shared in it, invalidate this block (no actual need to Flush) at this function! you have to execute transition S->I at this cycle.
+
+	// for BusRd:
+	// first initialize bus_shared to '0'. check if any of the caches has the block in it, and if so raise bus_shared to '1'. 
+	// 1. if other cache has the block Modified in it, generate Flush xaction from this core and update main_mem at the same time. switch the state of this block to Shared.
+	//	  now, don't go on bus with this xaction! switch this xaction of BusRd to Flush. main_mem should snoop this xaction and update its contents.
+	//    main_mem is supposed to snoop at some point and find out that bus_origid of the Flush cmd is not his, so it has to be updated too!
+	// 2. if other cache has the block Exclusive in it, make transition of this block: E->S at the very same clock cycle (within the scope of the function). no need to flush.
+	//    it's very important that the transition of the mesi state will occur instantly!
+	// 3. if other cache has the block Shared in it, next mesi_state will be the same (Shared), no flush is needed.

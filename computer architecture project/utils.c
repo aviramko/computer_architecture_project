@@ -74,7 +74,7 @@ int initialize_array_from_file(char* file_name, int* memory_array, int max_array
 }
 
 // Writes to bustrace file
-int write_bustrace(msi_bus bus, int cycle, char* bustrace_file)
+int write_bustrace(msi_bus* bus, int cycle, char* bustrace_file)
 {
 	if (cycle == 1)
 	{
@@ -93,8 +93,8 @@ int write_bustrace(msi_bus bus, int cycle, char* bustrace_file)
 		return ERROR_CODE;
 	}
 
-	if (bus.bus_cmd != BUS_NO_CMD_CODE)
-		fprintf(file_pointer, "%d %01X %01X %03X%02X %08X %01X\n", cycle, bus.bus_origid, bus.bus_cmd, bus.bus_addr.tag, bus.bus_addr.index, bus.bus_data, bus.bus_shared);
+	if (bus->bus_cmd != BUS_NO_CMD_CODE)
+		fprintf(file_pointer, "%d %01X %01X %03X%02X %08X %01X\n", cycle, bus->bus_origid, bus->bus_cmd, bus->bus_addr.tag, bus->bus_addr.index, bus->bus_data, bus->bus_shared);
 
 	fclose(file_pointer);
 

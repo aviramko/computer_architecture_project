@@ -1,7 +1,6 @@
 #ifndef BUS_MEM_HEADER
 #define BUS_MEM_HEADER
 
-//#include "core.h"
 #include "hard_coded_data.h"
 
 void initialize_bus(msi_bus* bus);

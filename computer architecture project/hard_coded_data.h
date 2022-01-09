@@ -54,6 +54,9 @@ typedef struct _cache cache;
 #define MESI_EXCLUSIVE 2
 #define MESI_MODIFIED 3
 
+#define BUS_SHARED 1
+#define BUS_NOT_SHARED 0
+
 // Blocks Status Codes
 #define VALID_BLOCK_CODE 0
 #define DIRTY_BLOCK_CODE 1
@@ -155,6 +158,11 @@ typedef enum _bus_origid {
 	core3_origid,
 	main_mem_origid
 } bus_origid;
+
+typedef enum _foo {
+	original_request,
+	flush_request,
+} foo;
 
 typedef enum MESI_states {
 	invalid,
