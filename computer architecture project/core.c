@@ -268,7 +268,7 @@ void execute(core* core)
 	case (and):
 		ALU_output = rs_value & rt_value;
 		break;
-	case(or ):
+	case(or):
 		ALU_output = rs_value | rt_value;
 		break;
 	case(xor):
@@ -296,6 +296,8 @@ void execute(core* core)
 	case (jal):
 		break;
 	case (lw):
+		ALU_output = rs_value + rt_value;
+		break;
 	case (sw):
 		ALU_output = rs_value + rt_value;
 		break;
@@ -437,6 +439,7 @@ void format_stage_trace(bool valid, bool stalled, bool halt, char* str, int num)
 	}
 }
 
+// Writes to coretrace file
 void write_trace(core* core, FILE* trace_file)
 {
 	char str[TRACE_FILE_LINE_LEN];
@@ -474,6 +477,9 @@ void copy_regs(core* core)
 
 void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem)
 {
+	if (core->core_halt)
+		return;
+	
 	if (core->mem_stall)
 	{
 		write_trace(core, trace_file);

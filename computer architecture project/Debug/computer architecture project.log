@@ -5,7 +5,8 @@
   parser.c
   utils.c
   Generating Code...
-C:\Users\avira\source\repos\comp_arc_proj\computer architecture project\cache.c(225): warning C4715: 'write_mem': not all control paths return a value
-C:\Users\avira\source\repos\comp_arc_proj\computer architecture project\cache.c(175): warning C4715: 'read_mem': not all control paths return a value
-C:\Users\avira\source\repos\comp_arc_proj\computer architecture project\bus_mem.c(122): warning C4715: 'find_xaction_origin': not all control paths return a value
-  computer architecture project.vcxproj -> C:\Users\avira\source\repos\comp_arc_proj\Debug\computer architecture project.exe
+C:\Users\יובל\Downloads\computer_architecture_project-master (2)\computer_architecture_project-master\computer architecture project\utils.c(210): warning C4716: 'write_files': must return a value
+C:\Users\יובל\Downloads\computer_architecture_project-master (2)\computer_architecture_project-master\computer architecture project\cache.c(225): warning C4715: 'write_mem': not all control paths return a value
+C:\Users\יובל\Downloads\computer_architecture_project-master (2)\computer_architecture_project-master\computer architecture project\cache.c(175): warning C4715: 'read_mem': not all control paths return a value
+C:\Users\יובל\Downloads\computer_architecture_project-master (2)\computer_architecture_project-master\computer architecture project\bus_mem.c(122): warning C4715: 'find_xaction_origin': not all control paths return a value
+  computer architecture project.vcxproj -> C:\Users\יובל\Downloads\computer_architecture_project-master (2)\computer_architecture_project-master\Debug\computer architecture project.exe

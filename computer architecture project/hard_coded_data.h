@@ -58,6 +58,11 @@ typedef struct _cache cache;
 #define VALID_BLOCK_CODE 0
 #define DIRTY_BLOCK_CODE 1
 
+/*// Clock cycle actions
+#define HALT -1
+#define STALL 0
+#define CONTINUE 1*/
+
 #define ARGS_EXPECTED_NUM 28
 
 #define DEFAULT_FILE_IMEM0 "imem0.txt"
