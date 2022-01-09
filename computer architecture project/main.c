@@ -15,26 +15,27 @@ int main(int argc, char* argv[])
 {
 	core cores[CORES_NUM];
 	msi_bus bus;
-	int main_mem[MAIN_MEM_SIZE], valid_request[CORES_NUM], memory_request_cycle[CORES_NUM];
+	static int main_mem[MAIN_MEM_SIZE];
+	int valid_request[CORES_NUM], memory_request_cycle[CORES_NUM];
 
 	int cycle = 0;
 	int next_RR = 0;
 	initialize_bus(&bus);
 	initialize_main_mem(main_mem, valid_request, memory_request_cycle);
 
-	for (int i = 0; i < CORES_NUM; i++)
-		initialize_core(&cores[i], argv[i + 1]);
+	//for (int i = 0; i < CORES_NUM; i++)
+	//	initialize_core(&cores[i], argv[i + 1]);
+	initialize_core(&cores[0], argv[1]);
 
 	FILE* fp_core0trace = fopen(argv[11], "w");
 
 	while (!all_cores_halt(cores)) // all cores halt
 	{
-		
-
 		//main_memory_bus_snooper(cores, bus, cycle, main_mem, valid_request, memory_request_cycle);
 
-		for (int i = 0; i < CORES_NUM; i++)
-			simulate_clock_cycle(&cores[i], fp_core0trace, main_mem);
+		//for (int i = 0; i < CORES_NUM; i++)
+		//	simulate_clock_cycle(&cores[i], fp_core0trace, main_mem);
+		simulate_clock_cycle(&cores[0], fp_core0trace, main_mem);
 
 		update_bus(cores, &bus, cycle, &next_RR, valid_request, memory_request_cycle, main_mem);
 

@@ -343,7 +343,7 @@ void memory(core* core, int *main_mem)
 			//core->core_pipeline[EX_MEM].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
 			//core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[MEM_WB].current_instruction;
 			//core->core_pipeline[MEM_WB].new_instruction.stalled = true;
-			core->core_pipeline[MEM_WB].current_instruction.stalled = true;
+			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
 			return;
 		}
@@ -358,7 +358,7 @@ void memory(core* core, int *main_mem)
 		if (write_result == MISS_CODE)
 		{
 			// stall core
-			core->core_pipeline[MEM_WB].current_instruction.stalled = true;
+			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
 			return;
 		}
@@ -413,6 +413,11 @@ void write_back(core* core)
 
 void update_stage_buffers(core* core)
 {
+	if (core->mem_stall)	//special case for memory stall, WB stage can continue
+	{
+		core->core_pipeline[MEM_WB].current_instruction = core->core_pipeline[MEM_WB].new_instruction;
+		return;
+	}
 	// update instructions
 	core->core_pipeline[IF_ID].current_instruction = core->core_pipeline[IF_ID].new_instruction;
 	core->core_pipeline[ID_EX].current_instruction = core->core_pipeline[ID_EX].new_instruction;

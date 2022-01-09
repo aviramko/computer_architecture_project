@@ -30,6 +30,7 @@ void initialize_cache_rams(cache *core_cache)
 			core_cache->tsram[i].MESI_state = invalid;
 			core_cache->tsram[i].valid = true;
 		}
+		i++;
 	}
 }
 
