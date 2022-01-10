@@ -6,5 +6,4 @@
 
 void parse_imem_file(core *core, char *imem_filename);
 
-
 #endif // !PARSER_HEADER

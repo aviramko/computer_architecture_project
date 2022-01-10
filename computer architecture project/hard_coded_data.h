@@ -66,6 +66,12 @@ typedef struct _cache cache;
 #define STALL 0
 #define CONTINUE 1*/
 
+// Status Codes
+#define READ_MISS_CODE 0
+#define READ_HIT_CODE 1
+#define WRITE_MISS_CODE 2
+#define WRITE_HIT_CODE 3
+
 #define ARGS_EXPECTED_NUM 28
 
 #define DEFAULT_FILE_IMEM0 "imem0.txt"

@@ -20,6 +20,10 @@ int main(int argc, char* argv[])
 
 	int cycle = 0;
 	int next_RR = 0;
+
+	char* args_files[ARGS_EXPECTED_NUM - 1];
+	initialize_args_files(args_files, argc, argv);
+
 	initialize_bus(&bus);
 	initialize_main_mem(main_mem, valid_request, memory_request_cycle);
 
@@ -42,6 +46,8 @@ int main(int argc, char* argv[])
 		//for(i=0; i<CORES_NUM; i++)
 		// core_bus_snooper
 
+		//write_bustrace?
+
 		cycle++;
 
 		//do_bus_and_main_mem_stuff(&core0, main_mem, bus, memory_bus_request);
@@ -49,10 +55,12 @@ int main(int argc, char* argv[])
 	}
 
 	// print to files
+	//if (write_files(cores, args_files, main_mem) == ERROR_CODE)
+	//	return ERROR_CODE;
 
 	fclose(fp_core0trace);
 
-	return 0;
+	return SUCCESS_CODE;
 }
 
 //int main(int argc, char* argv[])

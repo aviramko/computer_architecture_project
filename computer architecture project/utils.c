@@ -19,42 +19,42 @@ int address_to_integer(address addr)
 	return result;
 }
 
-/*void initialize_args(char* args_files[ARGS_EXPECTED_NUM - 1], int args_num, char* args_values[])
+void initialize_args_files(char* args_files[ARGS_EXPECTED_NUM - 1], int args_num, char* args_values[])
 {
 	if (args_num != ARGS_EXPECTED_NUM)
 	{
-		args_files[0] = DEFAULT_FILE_IMEM0;
-		args_files[1] = DEFAULT_FILE_IMEM1;
-		args_files[2] = DEFAULT_FILE_IMEM2;
-		args_files[3] = DEFAULT_FILE_IMEM3;
-		args_files[4] = DEFAULT_FILE_MEMIN;
-		args_files[5] = DEFAULT_FILE_MEMOUT;
-		args_files[6] = DEFAULT_FILE_REGOUT0;
-		args_files[7] = DEFAULT_FILE_REGOUT1;
-		args_files[8] = DEFAULT_FILE_REGOUT2;
-		args_files[9] = DEFAULT_FILE_REGOUT3;
-		args_files[10] = DEFAULT_FILE_CORE0TRACE;
-		args_files[11] = DEFAULT_FILE_CORE1TRACE;
-		args_files[12] = DEFAULT_FILE_CORE2TRACE;
-		args_files[13] = DEFAULT_FILE_CORE3TRACE;
-		args_files[14] = DEFAULT_FILE_BUSTRACE;
-		args_files[15] = DEFAULT_FILE_DSRAM0;
-		args_files[16] = DEFAULT_FILE_DSRAM1;
-		args_files[17] = DEFAULT_FILE_DSRAM2;
-		args_files[18] = DEFAULT_FILE_DSRAM3;
-		args_files[19] = DEFAULT_FILE_TSRAM0;
-		args_files[20] = DEFAULT_FILE_TSRAM1;
-		args_files[21] = DEFAULT_FILE_TSRAM2;
-		args_files[22] = DEFAULT_FILE_TSRAM3;
-		args_files[23] = DEFAULT_FILE_STATS0;
-		args_files[24] = DEFAULT_FILE_STATS1;
-		args_files[25] = DEFAULT_FILE_STATS2;
-		args_files[26] = DEFAULT_FILE_STATS3;
+		args_files[0] = DEFAULT_FILE_IMEM0; //imem0
+		args_files[1] = DEFAULT_FILE_IMEM1; //imem1
+		args_files[2] = DEFAULT_FILE_IMEM2; //imem2
+		args_files[3] = DEFAULT_FILE_IMEM3; //imem3
+		args_files[4] = DEFAULT_FILE_MEMIN; //memin
+		args_files[5] = DEFAULT_FILE_MEMOUT; //memout
+		args_files[6] = DEFAULT_FILE_REGOUT0; //regout0 
+		args_files[7] = DEFAULT_FILE_REGOUT1; //regout1
+		args_files[8] = DEFAULT_FILE_REGOUT2; //regout2
+		args_files[9] = DEFAULT_FILE_REGOUT3; //regout3 
+		args_files[10] = DEFAULT_FILE_CORE0TRACE; //core0trace
+		args_files[11] = DEFAULT_FILE_CORE1TRACE; //core1trace
+		args_files[12] = DEFAULT_FILE_CORE2TRACE; //core2trace
+		args_files[13] = DEFAULT_FILE_CORE3TRACE; //core3trace
+		args_files[14] = DEFAULT_FILE_BUSTRACE; //bustrace
+		args_files[15] = DEFAULT_FILE_DSRAM0; //dsram0
+		args_files[16] = DEFAULT_FILE_DSRAM1; //dsram1
+		args_files[17] = DEFAULT_FILE_DSRAM2; //dsram2
+		args_files[18] = DEFAULT_FILE_DSRAM3; //dsram3
+		args_files[19] = DEFAULT_FILE_TSRAM0; //tsram0
+		args_files[20] = DEFAULT_FILE_TSRAM1; //tsram1
+		args_files[21] = DEFAULT_FILE_TSRAM2; //tsram2
+		args_files[22] = DEFAULT_FILE_TSRAM3; //tsram3
+		args_files[23] = DEFAULT_FILE_STATS0; //stats0
+		args_files[24] = DEFAULT_FILE_STATS1; //stats1
+		args_files[25] = DEFAULT_FILE_STATS2; //stats2
+		args_files[26] = DEFAULT_FILE_STATS3; //stats3
 		return;
 	}
 	for (int i = 0; i < ARGS_EXPECTED_NUM - 1; i++)
 		args_files[i] = args_values[i + 1];
-}*/
+}
 
 // Initializing int array from a file. return memory length
 int initialize_array_from_file(char* file_name, int* memory_array, int max_array_size)
@@ -204,7 +204,46 @@ int write_memout(int main_mem[MAIN_MEM_SIZE], char* memout_file)
 }
 
 // Activate all output function at the end
-int write_files(core* cores, char** output_files)
+int write_files(core* cores, char* args_files[ARGS_EXPECTED_NUM - 1], int main_mem[MAIN_MEM_SIZE])
 {
+	char* memout_file = args_files[5];
+	if (write_memout(main_mem, memout_file) == ERROR_CODE)
+		return ERROR_CODE;
+	
+	for (int i = 0; i < CORES_NUM; i++)
+	{
+		if (write_regout(&(cores[i]), args_files[6 + i]) == ERROR_CODE)
+			return ERROR_CODE;
+		if (write_dsram(&(cores[i]), args_files[15 + i]) == ERROR_CODE)
+			return ERROR_CODE;
+		if (write_tsram(&(cores[i]), args_files[19 + i]) == ERROR_CODE)
+			return ERROR_CODE;
+		if (write_stats(&(cores[i]), args_files[23 + i]) == ERROR_CODE)
+			return ERROR_CODE;
+	}
+
+	return SUCCESS_CODE;
+}
+
+// Updates statistics by core num and code.
+void updateStatistics(core* core, int status)
+{
+
+	//if (core->followingWB == true) {
+	//	core->followingWB = false;
+	//	return;
+	//}
+
+
+	// if stall return
+
+	if (status == READ_MISS_CODE)
+		core->stat.read_miss++;
+	else if (status == READ_HIT_CODE)
+		core->stat.read_hit++;
+	else if (status == WRITE_MISS_CODE)
+		core->stat.write_miss++;
+	else if (status == WRITE_HIT_CODE)
+		core->stat.write_hit++;
 
 }

@@ -10,7 +10,9 @@
 #include "utils.h"
 
 void initialize_core(core *core, char *imem_filename);
+
 void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem);
+
 bool all_cores_halt(core cores[CORES_NUM]);
 
 #endif // !CORE_HEADER

@@ -324,6 +324,7 @@ void memory(core* core, int *main_mem)
 	if (stalled)
 	{
 		core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
+		core->stat.mem_stall++;
 		return;
 	}
 
@@ -387,6 +388,8 @@ void write_back(core* core)
 	}
 
 	instruction current_instruction = core->core_pipeline[MEM_WB].current_instruction;
+	core->stat.instructions++;
+
 	if ((current_instruction.opcode >= beq) && (current_instruction.opcode <= bge))
 	{
 		return;
