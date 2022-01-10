@@ -166,10 +166,10 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 	// integer core now holds the core that won arbitration. 
 
 	//initialize bus_shared to zero before snooping other cores
-	if (cores[core_num].bus_request.bus_cmd == bus_rd)
-	{
-		cores[core_num].bus_request.bus_shared = BUS_NOT_SHARED;
-	}
+	cores[core_num].bus_request.bus_shared = BUS_NOT_SHARED;
+	//if (cores[core_num].bus_request.bus_cmd == bus_rd)
+	//{
+	//}
 
 	//now let the cores snoop the request.
 	// for BusRdX:
@@ -208,11 +208,10 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 
 	//put xaction on bus
 	*bus = cores[core_num].bus_request;
-	write_bustrace(bus, cycle, "bustrace.txt");
+	write_bustrace(bus, cycle, "bustrace.txt"); // write the bus request, before we might change it to flush 
 
-	if (flush) //write to bustrace.txt and change xaction to flush
+	if (flush) // change xaction to flush
 	{
-		
 		bus->bus_origid = flushing_core;
 		if (bus->bus_cmd == bus_rd)	// block was modified in another cache, so check if it's going to shared state or invalid state
 		{
@@ -233,18 +232,12 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		bus->bus_addr.index = block_base_index;
 		bus->bus_addr.tag = block_tag;
 		bus->bus_data = main_mem[main_mem_address];
-		return; // exit function with new flush xaction
+		// exit function with new flush xaction
 	}
-	else
+	else // BusRd or BusRdX is going out on the bus! (and not a flush xaction)
 	{
 		bus->bus_shared = (shared_flags[0] || shared_flags[1] || shared_flags[2] || shared_flags[3]) ? BUS_SHARED : BUS_NOT_SHARED;
 	}
 
-	//now let main_mem snoop the request. - not sure if needed here
-
-
-	//if (bus->bus_cmd != no_cmd)
-	//{
-	//	return;
-	//}
+	return;	// exit function, after sending the correct xaction (if there is any xaction to be sent) or dealing with flush (if there is any flush xaction to be dealt with)
 }

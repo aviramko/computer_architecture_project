@@ -122,10 +122,10 @@ int read_mem(core *core, int *main_mem)
 	case (shared):
 		if (block_in_cache)
 		{
-			core->core_cache.tsram[tsram_index].next_MESI_state = shared;
+			//core->core_cache.tsram[tsram_index].next_MESI_state = shared;
 			return core->core_cache.dsram[index];	//hit
 		}
-		else
+		else	// conflict miss
 		{
 			create_bus_request(core, 0, address_format, bus_rd, 0x0);	//miss
 			return MISS_CODE;
@@ -135,7 +135,7 @@ int read_mem(core *core, int *main_mem)
 	case (exclusive):
 		if (block_in_cache)
 		{
-			core->core_cache.tsram[tsram_index].next_MESI_state = exclusive;
+			//core->core_cache.tsram[tsram_index].next_MESI_state = exclusive;
 			return core->core_cache.dsram[index];	//hit
 		}
 		else
@@ -148,25 +148,26 @@ int read_mem(core *core, int *main_mem)
 	case (modified):
 		if (block_in_cache)
 		{
-			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+			//core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 			return core->core_cache.dsram[index];	//hit
 		}
 		else
 		{
-			// flush old data (no need to wait 16 clock cycles)
-			int block_base_index = index - index % 4;
-			int block_tag = core->core_cache.tsram[block_base_index / 4].tag;
-			int main_mem_address = (block_tag << 8) | (block_base_index);
-			for (int i = 0; i < BLOCK_SIZE; i++)
-			{
-				main_mem[main_mem_address + i] = core->core_cache.dsram[block_base_index + i];
-			}
+			//// flush old data (no need to wait 16 clock cycles)
+			//int block_base_index = index - index % 4;
+			//int block_tag = core->core_cache.tsram[block_base_index / 4].tag;
+			//int main_mem_address = (block_tag << 8) | (block_base_index);
+			//for (int i = 0; i < BLOCK_SIZE; i++)
+			//{
+			//	main_mem[main_mem_address + i] = core->core_cache.dsram[block_base_index + i];
+			//}
 
-			create_bus_request(core, 0, address_format, bus_rd, 0x0);	//miss
+			//create_bus_request(core, 0, address_format, bus_rd, 0x0);	//miss
+
+			// first create a flush xaction, win arbitration, and then create bus_rd xaction and win arbitration
+
 			return MISS_CODE;
 		}
-		//core->core_cache.tsram[index].next_MESI_state = modified;
-		//return core->core_cache.dsram[index];	//hit
 		break;
 	}
 	
@@ -193,37 +194,55 @@ int write_mem(core *core)
 	case (shared):
 		if (block_in_cache)
 		{
-			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit, write and move mesi to modified. should we write now or wait for busrdx?
+			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit, write and move mesi to modified.
 			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 			create_bus_request(core, 0, address_format, bus_rdx, 0x0);
 			return MISS_CODE; // returned miss because we still need to stall. Officialy, it's not a miss, but it's recommended to wait
+			// update data in $ only when data returns
 		}
 		else
 		{
 			// in case shared, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
-			create_bus_request(core, 0, address_format, bus_rdx, 0x0);	// get exclusive access to this block
+			create_bus_request(core, 0, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
+			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 			return MISS_CODE;
 		}
 		break;
 
 	case (exclusive):
 
-		//finish adding miss or hit states
-
-		core->core_cache.tsram[tsram_index].MESI_state = modified;
-		core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
-		//no need for bus request
-		return 0;
+		if (block_in_cache)
+		{
+			core->core_cache.tsram[tsram_index].MESI_state = modified;
+			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
+			return 0;	//hit, no need for bus request
+		}
+		else
+		{
+			// in case exclusive, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
+			create_bus_request(core, 0, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
+			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+			return MISS_CODE;
+		}
 		break;
 
 	case (modified):
 
-		//finish adding miss or hit states
+		if (block_in_cache)
+		{
+			core->core_cache.tsram[tsram_index].MESI_state = modified;
+			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
+			return 0; //hit, no need for bus request
+		}
+		else
+		{
 
-		core->core_cache.tsram[tsram_index].MESI_state = modified;
-		core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
-		//no need for bus request
-		return 0;
+			// first create a flush xaction, win arbitration, and then create bus_rdx xaction and win arbitration.
+			// then, and only then, write the data you initialy requested to write.
+			return MISS_CODE;
+		}
+
+		
 		break;
 	}
 }
@@ -276,7 +295,7 @@ void core_bus_snooper(core *core, int core_num, msi_bus *bus)
 	}
 }
 
-bool core_snoop_bus(core *core, int core_num, msi_bus *bus, bool *shared_flags)
+bool core_snoop_bus(core *core, int core_num, msi_bus *bus, bool *shared_flags)	
 {
 	msi_bus pending_request = core->bus_request;
 
