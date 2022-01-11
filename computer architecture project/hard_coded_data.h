@@ -72,6 +72,9 @@ typedef struct _cache cache;
 #define WRITE_MISS_CODE 2
 #define WRITE_HIT_CODE 3
 
+#define MAIN_MEM_ANSWER_CYCLES 16 
+#define FLUSH_CYCLES 4
+
 #define ARGS_EXPECTED_NUM 28
 
 #define DEFAULT_FILE_IMEM0 "imem0.txt"
@@ -154,7 +157,11 @@ typedef enum bus_requests {
 	no_cmd,
 	bus_rd,
 	bus_rdx,
-	flush
+	flush,
+	read_miss_flush_request,
+	read_miss_flush,
+	write_miss_flush_request,
+	write_miss_flush
 } bus_requests;
 
 typedef enum _bus_origid {
@@ -176,6 +183,12 @@ typedef enum MESI_states {
 	exclusive,
 	modified
 } MESI_states;
+
+typedef enum _flush_cause {
+	no_reason,
+	busrd_flush,
+	busrdx_flush
+} flush_cause;
 
 typedef struct tsram_entry {
 	unsigned int tag;
@@ -235,9 +248,11 @@ typedef struct MSI_bus
 	unsigned int bus_shared : 1;
 	unsigned int bus_data : 32;
 	address bus_addr;
-	unsigned int bus_cmd : 2;
+	unsigned int bus_cmd;
 	unsigned int bus_origid : 3;
 	int cycles_left;
+	flush_cause flush_reason;
+	int flush_to;
 } msi_bus;
 
 typedef struct MSI_bus_FF {

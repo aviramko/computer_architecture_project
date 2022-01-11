@@ -32,6 +32,7 @@ void initialize_bus(msi_bus *bus)
 	bus->bus_cmd = EMPTY_DATA_FIELD;
 	bus->bus_data = EMPTY_DATA_FIELD;
 	bus->bus_origid = EMPTY_DATA_FIELD;
+	bus->flush_reason = no_reason;
 }
 
 void put_xaction_on_bus(msi_bus xaction, msi_bus *bus)
@@ -112,42 +113,108 @@ void cancel_memory_request(int core_num, int *valid_request) // add support in m
 //}
 
 
-int find_xaction_origin(int *valid_request)
-{
-	for (int i = 0; i < CORES_NUM; i++)
-		if (valid_request[i] == VALID_REQUEST_CODE)
-			return i;
-}
+
 
 void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle, int *main_mem)
 {
 	// first check if bus is busy
 
-	// let bus cycles left, if needed, to be promoted.
-	// check if xaction ended
-	//if ((bus->cycles_left == 0) && (bus->bus_cmd != no_cmd))	// set default for next cycle
-	//{
-	//	bus->bus_cmd = no_cmd;
-	//}
-	//
-	//if (bus->cycles_left == 5) // next cycle is beginning of flush from main_mem
-	//{
-	//	// load bus with flush request from main memory
-	//	bus->bus_origid = main_mem_origid;
-	//	bus->bus_cmd = flush;
-	//	address word_address = bus->bus_addr;
-	//	int integer_address = address_to_integer(word_address);
-	//	int aligned_address = integer_address - (integer_address % 4);
-	//	bus->bus_addr.index = aligned_address & 0xFF;
-	//	bus->bus_addr.tag = (aligned_address >> 8) & 0xFFF;
-	//	bus->bus_data = main_mem[address_to_integer(bus->bus_addr)];
-	//	return;
-	//}
+	// check BusRd/BusRdX clock cycles left
+	if ((bus->bus_cmd == bus_rd) || (bus->bus_cmd == bus_rdx))
+	{
+		if (bus->cycles_left > 0)	// BusRd or BusRdx xaction finished
+		{
+			bus->cycles_left -= 1;
+			return;
+		}
+		bus->cycles_left = FLUSH_CYCLES - 1;
+		bus->bus_cmd = flush;
+		bus->flush_to = bus->bus_origid;
+		bus->bus_origid = main_mem_origid;
 
-	//now let main_mem snoop the request. if flush is needed, check the origid. if origid is main_mem, he'll supply the data. else, he'll take data.
+		int read_address = cores[bus->bus_origid].core_pipeline[EX_MEM].current_ALU_output;
+		int index = read_address & 0xFF;
+		int tag = (read_address >> 8) & 0xFFF;
+		int tsram_index = index / 4;
+		int block_base_index = index - index % 4;
+		int tsram_index = block_base_index / 4;
+		int block_tag = cores[bus->bus_origid].core_cache.tsram[tsram_index].tag;
+		int main_mem_address = (block_tag << 8) | (block_base_index);
+		address main_mem_address_formatted = { block_base_index, block_tag };
+
+		bus->bus_addr = main_mem_address_formatted;
+
+		//write_bustrace(bus, cycle, "bustrace.txt");
+	}
 	
+	// check flush, and execute if needed
+	// now (in flush, if needed) let main_mem snoop the request. if flush is needed, check the origid. if origid is main_mem, he'll supply the data. else, he'll take data.
+	if (bus->bus_cmd == flush)
+	{
+		// print the flush for this cycle
+		// actual execution of the flush request, let main_mem snoop
+		// check if flush finished:
+		// if finished, update new mesi_state, new tag in tsram, unfreeze core for next cycle, cancel core_bus_request
+		// if not, update dsram and go for the next address flush
+		
+		//write_bustrace(bus, cycle, "bustrace.txt");
+		int main_mem_address = address_to_integer(bus->bus_addr);
+		int dsram_index = bus->bus_addr.index;
+		
+		if (bus->bus_origid != main_mem_origid) // main_mem takes data, it wasn't the one who flushed the data
+		{
+			int data = cores[bus->bus_origid].core_cache.dsram[dsram_index];
+			bus->bus_data = data;
+			write_bustrace(bus, cycle, "bustrace.txt");
+
+			main_mem[main_mem_address] = data;
+			cores[bus->flush_to].core_cache.dsram[dsram_index] = data;	//flush data to core that initiated xaction
+		}
+		else // main memory returns the data
+		{
+			int data = main_mem[main_mem_address];
+			bus->bus_data = data;
+			write_bustrace(bus, cycle, "bustrace.txt");
+
+			cores[bus->flush_to].core_cache.dsram[dsram_index] = data;
+		}
+
+		if (bus->cycles_left == 0)
+		{
+			// update new mesi_state, new tag in tsram, unfreeze core for next cycle, cancel core_bus_request
+
+		}
+		else
+		{
+			// update address
+			bus->bus_addr.index++;
+			bus->cycles_left -= 1;
+		}
+
+	}
+	else if ((bus->bus_cmd == write_miss_flush) || (bus->bus_cmd == read_miss_flush))
+	{
+		// print the flush for this cycle
+		// actually execution of the flush request
+		// check if flush finished:
+		// if finished, put a new request on the bus: if read then put BusRd, if write then put BusRdX
+		// if not, update main_mem and go for the next address flush.
+
+		//write_bustrace(bus, cycle, "bustrace.txt");
+
+
+		if (bus->cycles_left == 0)
+		{
+
+		}
+		else
+		{
+			bus->cycles_left -= 1;
+		}
+	}
+
 	// enter this section of function only upon BusRd or BusRdX xactions. flush xactions should be taken care of earlier in this function, and should not reach this far.
-	// if no_cmd, also take care of it before this section
+	// if no_cmd, also take care of it before this section. if flush due to a conflict miss, treat after arbitration
 
 	int core_num, i;
 	//let arbitration take place here. Treat the state in which none of the cores wants to do something
@@ -156,6 +223,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		core_num = (i + (*next_RR)) % CORES_NUM;	// go cylic and allow Round-Robin arbitration
 		if (cores[core_num].bus_request.bus_cmd != no_cmd)
 		{
+			*next_RR += 1;
 			break;
 		}
 	}
@@ -163,13 +231,40 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 	{
 		return;
 	}
-	// integer core now holds the core that won arbitration. 
+	// integer core_num now holds the core that won arbitration. 
 
 	//initialize bus_shared to zero before snooping other cores
-	cores[core_num].bus_request.bus_shared = BUS_NOT_SHARED;
-	//if (cores[core_num].bus_request.bus_cmd == bus_rd)
-	//{
-	//}
+	bus->bus_shared = BUS_NOT_SHARED;
+
+	// take care of flush that is caused by conflict miss for a block that is modified
+	if ((cores[core_num].bus_request.bus_cmd == write_miss_flush_request) || (cores[core_num].bus_request.bus_cmd == read_miss_flush_request))	
+	{
+		bus->flush_reason = cores[core_num].bus_request.flush_reason;
+		// flush first word
+		int main_mem_address = address_to_integer(cores[core_num].bus_request.bus_addr);
+		int data = cores[core_num].core_cache.dsram[cores[core_num].bus_request.bus_addr.index];
+		main_mem[main_mem_address] = data;
+		bus->bus_addr = cores[core_num].bus_request.bus_addr;
+		bus->bus_origid = core_num;
+		bus->bus_data = data;
+		bus->bus_cmd = flush;
+		write_bustrace(bus, cycle, "bustrace.txt");
+		bus->cycles_left = FLUSH_CYCLES - 2; // now update that we have only 3 cycles left to this flush
+
+		main_mem_address++;
+		int index = main_mem_address & 0xFF;
+		int tag = (main_mem_address >> 8) & 0xFFF;
+		address new_main_mem_address = { index, tag };
+
+		// change xaction to write_miss_flush or read_miss_flush, with only 3 cycles left (3 last word - adjust address as needed)
+		bus->bus_cmd = ((cores[core_num].bus_request.bus_cmd == write_miss_flush_request) ? write_miss_flush : read_miss_flush);
+		bus->bus_addr = new_main_mem_address;
+		bus->bus_data = 0x0;
+
+	}
+
+	//initialize bus_shared to zero before snooping other cores
+	bus->bus_shared = BUS_NOT_SHARED;
 
 	//now let the cores snoop the request.
 	// for BusRdX:
@@ -212,8 +307,9 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 
 	if (flush) // change xaction to flush
 	{
+		bus->flush_to = bus->bus_origid;
 		bus->bus_origid = flushing_core;
-		if (bus->bus_cmd == bus_rd)	// block was modified in another cache, so check if it's going to shared state or invalid state
+		if (bus->bus_cmd == bus_rd)	// block was surely in modified state in another cache, so check if it's going to shared state or invalid state
 		{
 			bus->bus_shared = BUS_SHARED; 
 		}
@@ -231,12 +327,13 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 
 		bus->bus_addr.index = block_base_index;
 		bus->bus_addr.tag = block_tag;
-		bus->bus_data = main_mem[main_mem_address];
+		bus->bus_data = 0x0;
 		// exit function with new flush xaction
 	}
 	else // BusRd or BusRdX is going out on the bus! (and not a flush xaction)
 	{
 		bus->bus_shared = (shared_flags[0] || shared_flags[1] || shared_flags[2] || shared_flags[3]) ? BUS_SHARED : BUS_NOT_SHARED;
+		bus->cycles_left = MAIN_MEM_ANSWER_CYCLES - 1;
 	}
 
 	return;	// exit function, after sending the correct xaction (if there is any xaction to be sent) or dealing with flush (if there is any flush xaction to be dealt with)
