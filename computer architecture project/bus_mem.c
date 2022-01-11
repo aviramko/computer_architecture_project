@@ -137,7 +137,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		int tag = (read_address >> 8) & 0xFFF;
 		int tsram_index = index / 4;
 		int block_base_index = index - index % 4;
-		int tsram_index = block_base_index / 4;
+		//int tsram_index = block_base_index / 4; // appears twice, decided which one to delete
 		int block_tag = cores[bus->bus_origid].core_cache.tsram[tsram_index].tag;
 		int main_mem_address = (block_tag << 8) | (block_base_index);
 		address main_mem_address_formatted = { block_base_index, block_tag };

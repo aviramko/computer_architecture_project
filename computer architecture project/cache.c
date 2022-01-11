@@ -192,7 +192,6 @@ int write_mem(core *core)
 		core->bus_request.flush_reason = busrdx_flush;
 		//core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 		return MISS_CODE;
-		break;
 
 	case (shared):
 		if (cache_hit)
@@ -204,15 +203,12 @@ int write_mem(core *core)
 			return MISS_CODE; // returned miss because we still need to stall. Officialy, it's not a miss, but it's recommended to wait
 			// update data in $ only when data returns
 		}
-		else
-		{
-			// in case shared, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
-			create_bus_request(core, 0, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
-			core->bus_request.flush_reason = busrdx_flush;
-			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
-			return MISS_CODE;
-		}
-		break;
+
+		// in case shared, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
+		create_bus_request(core, 0, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
+		core->bus_request.flush_reason = busrdx_flush;
+		core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+		return MISS_CODE;
 
 	case (exclusive):
 
@@ -222,15 +218,12 @@ int write_mem(core *core)
 			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
 			return HIT_CODE;	//hit, no need for bus request
 		}
-		else
-		{
-			// in case exclusive, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
-			create_bus_request(core, 0, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
-			core->bus_request.flush_reason = busrdx_flush;
-			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
-			return MISS_CODE;
-		}
-		break;
+
+		// in case exclusive, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
+		create_bus_request(core, 0, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
+		core->bus_request.flush_reason = busrdx_flush;
+		core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+		return MISS_CODE;
 
 	case (modified):
 
@@ -240,22 +233,19 @@ int write_mem(core *core)
 			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
 			return HIT_CODE; //hit, no need for bus request
 		}
-		else
-		{
-			// first create a flush xaction, win arbitration, and then create bus_rdx xaction and win arbitration.
-			// then, and only then, write the data you initialy requested to write.
-			int block_base_index = index - index % 4;
-			int tsram_index = block_base_index / 4;
-			int block_tag = core->core_cache.tsram[tsram_index].tag;
-			int main_mem_address = (block_tag << 8) | (block_base_index);
-			address main_mem_address_formatted = { block_base_index, block_tag };
 
-			core->bus_request.flush_reason = busrdx_flush;
-			create_bus_request(core, 0, main_mem_address_formatted, write_miss_flush_request, 0x0);	//miss
+		// first create a flush xaction, win arbitration, and then create bus_rdx xaction and win arbitration.
+		// then, and only then, write the data you initialy requested to write.
+		int block_base_index = index - index % 4;
+		int tsram_index = block_base_index / 4;
+		int block_tag = core->core_cache.tsram[tsram_index].tag;
+		int main_mem_address = (block_tag << 8) | (block_base_index);
+		address main_mem_address_formatted = { block_base_index, block_tag };
 
-			return MISS_CODE;
-		}
-		break;
+		core->bus_request.flush_reason = busrdx_flush;
+		create_bus_request(core, 0, main_mem_address_formatted, write_miss_flush_request, 0x0);	//miss
+
+		return MISS_CODE;
 	}
 }
 

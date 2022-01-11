@@ -217,6 +217,10 @@ void decode(core* core)
 		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[ID_EX].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction.stalled = true;
 
+		instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
+		bool stalled = current_instruction.stalled;
+		if (!stalled)
+			core->stat.decode_stall;
 	}
 	else
 	{
@@ -236,7 +240,7 @@ void execute(core* core)
 
 	if (core->core_pipeline[ID_EX].current_instruction.opcode == halt)
 	{
-		core->core_pipeline[IF_ID].halt = true;
+		core->core_pipeline[IF_ID].halt = true;	
 	}
 
 	bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
@@ -247,6 +251,7 @@ void execute(core* core)
 	}
 
 	instruction current_instruction = core->core_pipeline[ID_EX].current_instruction;
+	core->stat.instructions++;
 	int current_opcode = current_instruction.opcode;
 	int ALU_output = 0;
 
@@ -387,6 +392,7 @@ void write_back(core* core)
 	{
 		core->core_pipeline[EX_MEM].halt = true;
 		core->core_halt = true;
+		core->stat.instructions++;
 		return;
 	}
 
@@ -438,6 +444,7 @@ void update_stage_buffers(core* core)
 
 	// update mem_output
 	core->core_pipeline[MEM_WB].current_mem_output = core->core_pipeline[MEM_WB].new_mem_output;
+	core->stat.cycles++;
 }
 
 void format_stage_trace(bool valid, bool stalled, bool halt, char* str, int num)

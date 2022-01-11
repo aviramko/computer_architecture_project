@@ -11,6 +11,7 @@ typedef struct _cache cache;
 
 #define SUCCESS_CODE 0 // yuval
 #define ERROR_CODE -1 //yuval
+#define MESI_ERROR -2
 
 #define NUM_OF_REGS 16
 #define MAX_IMEM_LINES 1024
