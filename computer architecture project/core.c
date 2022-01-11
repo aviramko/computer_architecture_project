@@ -157,7 +157,7 @@ void check_branch(core* core)
 
 	int rs_value = core->core_registers[current_instruction.rs];
 	int rt_value = (current_instruction.rt == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rt];	// if rt = 1 then take immediate value
-	int next_branch_PC = core->core_registers[current_instruction.rt] & 0x3FF; // R[rd][9:0]
+	int next_branch_PC = core->core_registers[current_instruction.rd] & 0x3FF; // R[rd][9:0]
 
 	switch (opcode)
 	{
@@ -311,7 +311,7 @@ void execute(core* core)
 	core->core_pipeline[EX_MEM].new_ALU_output = ALU_output;
 }
 
-void memory(core* core, int *main_mem)
+void memory(core* core, int *main_mem, int core_num)
 {
 	bool valid_stage = check_stage_validity(core, EX_MEM);
 	instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
@@ -337,8 +337,7 @@ void memory(core* core, int *main_mem)
 	// memory treatment
 	if (current_instruction.opcode == lw)
 	{
-		// wrap in big if that asks if read access was already done or something like that
-		int read_res = read_mem(core, main_mem);
+		int read_res = read_mem(core, main_mem, core_num);
 		if (read_res == MISS_CODE)
 		{
 			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
@@ -352,7 +351,7 @@ void memory(core* core, int *main_mem)
 	}
 	else if (current_instruction.opcode == sw)
 	{
-		int write_result = write_mem(core);
+		int write_result = write_mem(core, core_num);
 		if (write_result == MISS_CODE)
 		{
 			// stall core
@@ -416,13 +415,22 @@ void write_back(core* core)
 	}
 
 	//if (current_instruction.opcode == lw)	// reg-memory or reg-reg operation 
-	if (((current_instruction.opcode >= add) && (current_instruction.opcode <= srl)) || (current_instruction.opcode == lw))
+	if ((current_instruction.opcode >= add) && (current_instruction.opcode <= srl))
 	{
-		core->core_registers[reg] = core->core_pipeline[MEM_WB].current_mem_output;
+		core->core_registers[reg] = core->core_pipeline[MEM_WB].current_ALU_output;	// reg-reg operation
 		return;
 	}
+	else if (current_instruction.opcode == lw)
+	{
+		core->core_registers[reg] = core->core_pipeline[MEM_WB].current_mem_output; // mem-reg operation
+	}
+	else if (current_instruction.opcode == jal)
+	{
+		core->core_registers[R15] = core->core_pipeline[MEM_WB].new_instruction.PC;
+		int next_PC = core->core_registers[current_instruction.rd] & 0x3FF; // R[rd][9:0]
+	}
 
-	//core->core_registers[reg] = core->core_pipeline[MEM_WB].current_ALU_output;	// reg-reg operation
+	return;
 }
 
 void update_stage_buffers(core* core)
@@ -495,7 +503,7 @@ void copy_regs(core* core)
 	}
 }
 
-void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem)
+void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem, int core_num)
 {
 	if (core->core_halt)
 		return;
@@ -510,7 +518,7 @@ void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem)
 	fetch(core);
 	decode(core);
 	execute(core);
-	memory(core, main_mem);
+	memory(core, main_mem, core_num);
 	write_back(core);
 	write_trace(core, trace_file);
 	update_stage_buffers(core);

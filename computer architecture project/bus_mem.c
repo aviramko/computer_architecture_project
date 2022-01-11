@@ -165,32 +165,41 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		bus->bus_data = data;
 
 		write_bustrace(bus, cycle, "bustrace.txt");
-		cores[bus->flush_to].core_cache.dsram[dsram_index] = data;
+		cores[bus->flush_to].core_cache.dsram[dsram_index] = data; //flush data to core that initiated this flush xaction
 
 		// main_mem snooping
 		if (bus->bus_origid != main_mem_origid) // main_mem takes data, it wasn't the one who flushed the data (modified block data taken from another core)
 		{
-			//int data = cores[bus->bus_origid].core_cache.dsram[dsram_index];
-			//
-			//write_bustrace(bus, cycle, "bustrace.txt");
-			main_mem[main_mem_address] = data;
-			//cores[bus->flush_to].core_cache.dsram[dsram_index] = data;	//flush data to core that initiated this flush xaction
+			main_mem[main_mem_address] = data;	
 		}
-		//else // main memory returns the data
-		//{
-		//	//int data = main_mem[main_mem_address];
-		//	//bus->bus_data = data;
-		//	//write_bustrace(bus, cycle, "bustrace.txt");
-		//
-		//	//cores[bus->flush_to].core_cache.dsram[dsram_index] = data;
-		//}
 
 		if (bus->cycles_left == 0)
 		{
 			// update new mesi_state, new tag in tsram, unfreeze core for next cycle, cancel core_bus_request
-			//int target = ((bus->bus_origid != main_mem_origid) ?  : )
 			int tsram_index = dsram_index / 4;
 			cores[bus->flush_to].core_cache.tsram[tsram_index].tag = bus->bus_addr.tag;
+			cores[bus->flush_to].mem_stall = false;
+			
+			int old_mesi = cores[bus->flush_to].core_cache.tsram[tsram_index].MESI_state;
+			//flush reason, bus_shared
+			if (cores[bus->flush_to].bus_request.flush_reason == busrd_flush)
+			{
+				if (bus->bus_shared)
+				{
+					cores[bus->flush_to].core_cache.tsram[tsram_index].MESI_state = shared;
+				}
+				else
+				{
+					cores[bus->flush_to].core_cache.tsram[tsram_index].MESI_state = exclusive;
+				}
+			}
+			else if (cores[bus->flush_to].bus_request.flush_reason == busrdx_flush)
+			{
+				cores[bus->flush_to].core_cache.tsram[tsram_index].MESI_state = modified;
+			}
+			
+			initialize_bus(&(cores[bus->flush_to].bus_request));
+			initialize_bus(bus);
 		}
 		else
 		{
@@ -198,6 +207,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 			bus->bus_addr.index++;
 			bus->cycles_left -= 1;
 		}
+		return;
 
 	}
 	else if ((bus->bus_cmd == write_miss_flush) || (bus->bus_cmd == read_miss_flush))
@@ -209,16 +219,45 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		// if not, update main_mem and go for the next address flush.
 
 		//write_bustrace(bus, cycle, "bustrace.txt");
+		int main_mem_address = address_to_integer(bus->bus_addr);
+		int dsram_index = bus->bus_addr.index;
+		int temp = bus->bus_cmd;
+		bus->bus_cmd = flush;
 
+		int data = cores[bus->bus_origid].core_cache.dsram[cores[bus->bus_origid].bus_request.bus_addr.index];
+		bus->bus_data = data;
+
+		write_bustrace(bus, cycle, "bustrace.txt");
+		bus->bus_cmd = temp;
+
+		main_mem[main_mem_address] = data;
+		main_mem_address++;
+		int index = main_mem_address & 0xFF;
+		int tag = (main_mem_address >> 8) & 0xFFF;
+		address new_main_mem_address = { index, tag };
+
+		bus->bus_addr = new_main_mem_address;
+		bus->bus_data = 0x0;
 
 		if (bus->cycles_left == 0)
 		{
-
+			// bus_origid stays the same
+			bus->bus_addr = cores[bus->bus_origid].bus_request.bus_addr;
+			bus->bus_data = 0x0;
+			if (bus->flush_reason == busrd_flush)
+			{
+				bus->bus_cmd = bus_rd;
+			}
+			else if (bus->flush_reason == busrdx_flush)
+			{
+				bus->bus_cmd = bus_rdx;
+			}
 		}
 		else
 		{
 			bus->cycles_left -= 1;
 		}
+		return;
 	}
 
 	// enter this section of function only upon BusRd or BusRdX xactions. flush xactions should be taken care of earlier in this function, and should not reach this far.

@@ -226,16 +226,11 @@ int write_files(core* cores, char* args_files[ARGS_EXPECTED_NUM - 1], int main_m
 }
 
 // Updates statistics by core num and code.
-void updateStatistics(core* core, int status)
+void update_statistics(core* core, int status)
 {
-
-	//if (core->followingWB == true) {
-	//	core->followingWB = false;
-	//	return;
-	//}
-
-
-	// if stall return
+	instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
+	if (current_instruction.stalled)
+		return;
 
 	if (status == READ_MISS_CODE)
 		core->stat.read_miss++;

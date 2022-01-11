@@ -27,9 +27,9 @@ int main(int argc, char* argv[])
 	initialize_bus(&bus);
 	initialize_main_mem(main_mem, valid_request, memory_request_cycle);
 
-	//for (int i = 0; i < CORES_NUM; i++)
-	//	initialize_core(&cores[i], argv[i + 1]);
-	initialize_core(&cores[0], argv[1]);
+	for (int i = 0; i < CORES_NUM; i++)
+		initialize_core(&cores[i], args_files[i + 1]);
+	//initialize_core(&cores[0], argv[1]);
 
 	FILE* fp_core0trace = fopen(argv[11], "w");
 
@@ -37,9 +37,9 @@ int main(int argc, char* argv[])
 	{
 		//main_memory_bus_snooper(cores, bus, cycle, main_mem, valid_request, memory_request_cycle);
 
-		//for (int i = 0; i < CORES_NUM; i++)
-		//	simulate_clock_cycle(&cores[i], fp_core0trace, main_mem);
-		simulate_clock_cycle(&cores[0], fp_core0trace, main_mem);
+		for (int core_num = 0; core_num < CORES_NUM; core_num++)
+			simulate_clock_cycle(&cores[core_num], args_files[10 + core_num], main_mem, core_num);
+		//simulate_clock_cycle(&cores[0], fp_core0trace, main_mem);
 
 		update_bus(cores, &bus, cycle, &next_RR, valid_request, memory_request_cycle, main_mem);
 
@@ -62,23 +62,3 @@ int main(int argc, char* argv[])
 
 	return SUCCESS_CODE;
 }
-
-//int main(int argc, char* argv[])
-//{
-//	core cores_array[CORES_NUM];
-//	initialize_core(&(cores_array[0]), argv[1]);
-//	initialize_core(&(cores_array[1]), argv[2]);
-//	initialize_core(&(cores_array[2]), argv[3]);
-//	initialize_core(&(cores_array[3]), argv[4]);
-//	msi_bus bus[CORES_NUM];
-//	while (!all_cores_finished())
-//	{
-//		simulate_clock_cycle(&(cores_array[0]), fp_core0trace, &(bus[0]));
-//		simulate_clock_cycle(&(cores_array[1]), fp_core1trace, &(bus[1]));
-//		simulate_clock_cycle(&(cores_array[2]), fp_core2trace, &(bus[2]));
-//		simulate_clock_cycle(&(cores_array[3]), fp_core3trace, &(bus[3]));
-//		do_bus_and_main_mem_stuff(cores_array, main_mem_array, bus);
-//	}
-//
-//	return 0;
-//}

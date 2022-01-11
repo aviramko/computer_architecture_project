@@ -11,7 +11,7 @@
 
 void initialize_core(core *core, char *imem_filename);
 
-void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem);
+void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem, int core_num);
 
 bool all_cores_halt(core cores[CORES_NUM]);
 

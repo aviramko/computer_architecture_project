@@ -14,7 +14,7 @@ int write_bustrace(msi_bus* bus, int cycle, char* bustrace_file);
 
 int write_files(core* cores, char* args_files[ARGS_EXPECTED_NUM - 1], int main_mem[MAIN_MEM_SIZE]);
 
-void updateStatistics(core* core, int status);
+void update_statistics(core* core, int status);
 
 #endif // !UTILS_HEADER
 
