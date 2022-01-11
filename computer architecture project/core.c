@@ -67,6 +67,7 @@ void initialize_core(core *core, char *imem_filename)
 	core->halt_PC = false;
 	core->bus_request_status = NO_BUS_REQUEST_CODE;
 	core->mem_stall = false;
+	core->mem_completed = false;
 }
 
 bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
@@ -335,11 +336,6 @@ void memory(core* core, int *main_mem)
 		int read_res = read_mem(core, main_mem);
 		if (read_res == MISS_CODE)
 		{
-			//stall core
-			//core->next_PC -= 1;		// not sure if need to add old PC if after branch
-			//core->core_pipeline[EX_MEM].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
-			//core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[MEM_WB].current_instruction;
-			//core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
 			return;
@@ -358,6 +354,18 @@ void memory(core* core, int *main_mem)
 			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
 			return;
+		}
+		else
+		{
+			int reg = current_instruction.rd;
+			if (reg == R0)
+			{
+				return;
+			}
+			int write_address = core->core_pipeline[EX_MEM].current_ALU_output;
+			int index = write_address & 0xFF;
+
+			core->core_cache.dsram[index] = core->core_registers[reg]; // MEM[R[rs]+R[rt]] = R[rd]
 		}
 	}
 
@@ -401,13 +409,14 @@ void write_back(core* core)
 		return;
 	}
 
-	if (current_instruction.opcode == lw)	// reg-memory operation
+	//if (current_instruction.opcode == lw)	// reg-memory or reg-reg operation 
+	if (((current_instruction.opcode >= add) && (current_instruction.opcode <= srl)) || (current_instruction.opcode == lw))
 	{
 		core->core_registers[reg] = core->core_pipeline[MEM_WB].current_mem_output;
 		return;
 	}
 
-	core->core_registers[reg] = core->core_pipeline[MEM_WB].current_ALU_output;	// reg-reg operation
+	//core->core_registers[reg] = core->core_pipeline[MEM_WB].current_ALU_output;	// reg-reg operation
 }
 
 void update_stage_buffers(core* core)

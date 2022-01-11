@@ -157,7 +157,7 @@ int read_mem(core *core, int *main_mem)
 		}
 		else
 		{
-			//// flush old data (no need to wait 16 clock cycles)
+			// flush old data (no need to wait 16 clock cycles)
 			int block_base_index = index - index % 4;
 			int tsram_index = block_base_index / 4;
 			int block_tag = core->core_cache.tsram[tsram_index].tag;
@@ -220,7 +220,7 @@ int write_mem(core *core)
 		{
 			core->core_cache.tsram[tsram_index].MESI_state = modified;
 			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
-			return 0;	//hit, no need for bus request
+			return HIT_CODE;	//hit, no need for bus request
 		}
 		else
 		{
@@ -238,7 +238,7 @@ int write_mem(core *core)
 		{
 			core->core_cache.tsram[tsram_index].MESI_state = modified;
 			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
-			return 0; //hit, no need for bus request
+			return HIT_CODE; //hit, no need for bus request
 		}
 		else
 		{

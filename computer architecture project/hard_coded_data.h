@@ -7,6 +7,7 @@
 typedef struct _cache cache;
 
 #define MISS_CODE -1
+#define HIT_CODE 0
 
 #define SUCCESS_CODE 0 // yuval
 #define ERROR_CODE -1 //yuval
@@ -277,6 +278,7 @@ struct _core {
 	bool core_halt;
 	bool halt_PC;
 	bool mem_stall;
+	bool mem_completed;
 	char* imem_file;
 };
 typedef struct _core core;

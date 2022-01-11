@@ -160,29 +160,37 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		//write_bustrace(bus, cycle, "bustrace.txt");
 		int main_mem_address = address_to_integer(bus->bus_addr);
 		int dsram_index = bus->bus_addr.index;
-		
-		if (bus->bus_origid != main_mem_origid) // main_mem takes data, it wasn't the one who flushed the data
-		{
-			int data = cores[bus->bus_origid].core_cache.dsram[dsram_index];
-			bus->bus_data = data;
-			write_bustrace(bus, cycle, "bustrace.txt");
 
+		int data = (bus->bus_origid != main_mem_origid) ? cores[bus->bus_origid].core_cache.dsram[dsram_index] : main_mem[main_mem_address];
+		bus->bus_data = data;
+
+		write_bustrace(bus, cycle, "bustrace.txt");
+		cores[bus->flush_to].core_cache.dsram[dsram_index] = data;
+
+		// main_mem snooping
+		if (bus->bus_origid != main_mem_origid) // main_mem takes data, it wasn't the one who flushed the data (modified block data taken from another core)
+		{
+			//int data = cores[bus->bus_origid].core_cache.dsram[dsram_index];
+			//
+			//write_bustrace(bus, cycle, "bustrace.txt");
 			main_mem[main_mem_address] = data;
-			cores[bus->flush_to].core_cache.dsram[dsram_index] = data;	//flush data to core that initiated xaction
+			//cores[bus->flush_to].core_cache.dsram[dsram_index] = data;	//flush data to core that initiated this flush xaction
 		}
-		else // main memory returns the data
-		{
-			int data = main_mem[main_mem_address];
-			bus->bus_data = data;
-			write_bustrace(bus, cycle, "bustrace.txt");
-
-			cores[bus->flush_to].core_cache.dsram[dsram_index] = data;
-		}
+		//else // main memory returns the data
+		//{
+		//	//int data = main_mem[main_mem_address];
+		//	//bus->bus_data = data;
+		//	//write_bustrace(bus, cycle, "bustrace.txt");
+		//
+		//	//cores[bus->flush_to].core_cache.dsram[dsram_index] = data;
+		//}
 
 		if (bus->cycles_left == 0)
 		{
 			// update new mesi_state, new tag in tsram, unfreeze core for next cycle, cancel core_bus_request
-
+			//int target = ((bus->bus_origid != main_mem_origid) ?  : )
+			int tsram_index = dsram_index / 4;
+			cores[bus->flush_to].core_cache.tsram[tsram_index].tag = bus->bus_addr.tag;
 		}
 		else
 		{
