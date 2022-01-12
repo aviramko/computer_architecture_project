@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 	core cores[CORES_NUM];
 	msi_bus bus;
 	static int main_mem[MAIN_MEM_SIZE];
-	int valid_request[CORES_NUM], memory_request_cycle[CORES_NUM];
+	int memory_request_cycle[CORES_NUM];
 
 	int cycle = 0;
 	int next_RR = 0;
@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 	initialize_args_files(args_files, argc, argv);
 
 	initialize_bus(&bus);
-	initialize_main_mem(main_mem, valid_request, memory_request_cycle);
+	initialize_main_mem(main_mem, memory_request_cycle);
 	FILE *core_traces[CORES_NUM];
 	
 	FILE *tmp_fp= fopen(args_files[14], "w");
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 		for (int core_num = 0; core_num < CORES_NUM; core_num++)
 			simulate_clock_cycle(&cores[core_num], core_traces[core_num], main_mem, core_num);
 
-		update_bus(cores, &bus, cycle, &next_RR, valid_request, memory_request_cycle, main_mem);
+		update_bus(cores, &bus, cycle, &next_RR, memory_request_cycle, main_mem);
 
 		cycle++;
 	}

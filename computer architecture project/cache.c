@@ -16,6 +16,7 @@ int tsram_entry_to_line(tsram_entry entry)
 	return result;
 }
 
+// Initalizing DSRAM and TSRAM for the cache
 void initialize_cache_rams(cache *core_cache)
 {
 	int i = 0;
@@ -43,7 +44,7 @@ void create_bus_request(core *core, int core_num, address bus_addr, int request_
 	core->bus_request.bus_cmd = request_type;
 	core->bus_request.bus_addr = bus_addr;
 	core->bus_request.bus_data = data;
-	core->bus_request_status = PENDING_SEND_CODE;
+	//core->bus_request_status = PENDING_SEND_CODE;
 
 	//if (request_type == BUS_FLUSH_CODE) // WB
 	//{
@@ -56,30 +57,7 @@ void create_bus_request(core *core, int core_num, address bus_addr, int request_
 	//}
 }
 
-
-void clean_cache_data(core* core, address bus_addr)
-{
-	core->core_cache.dsram[bus_addr.index] = EMPTY_DATA_FIELD;
-	core->core_cache.tsram->tag = EMPTY_DATA_FIELD;
-	core->core_cache.tsram->MESI_state = EMPTY_DATA_FIELD;
-	core->core_cache.tsram->next_MESI_state = EMPTY_DATA_FIELD;
-	core->core_cache.tsram->valid = true;
-}
-
-void add_cache_data(core* core, address bus_addr, int data, int state)
-{
-	core->core_cache.dsram[bus_addr.index] = data;
-	core->core_cache.tsram[bus_addr.index].tag = bus_addr.tag;
-	core->core_cache.tsram[bus_addr.index].MESI_state = state;
-	core->core_cache.tsram[bus_addr.index].next_MESI_state = NO_STATE_CODE;
-}
-
-void update_MESI_state(core* core, address bus_addr, int state)
-{
-	core->core_cache.tsram[bus_addr.index].MESI_state = state;
-	core->core_cache.tsram[bus_addr.index].next_MESI_state = NO_STATE_CODE;
-}
-
+// Checks for memory hit or miss
 bool mem_block_search(tsram_entry *tsram, int tsram_index, int tag)
 {
 	bool block_valid = tsram[tsram_index].valid;
@@ -101,6 +79,7 @@ bool mem_block_search(tsram_entry *tsram, int tsram_index, int tag)
 	}
 }
 
+// When lw needs access to memory
 int read_mem(core *core, int *main_mem, int core_num)
 {
 	int read_address = core->core_pipeline[EX_MEM].current_ALU_output;
@@ -116,6 +95,7 @@ int read_mem(core *core, int *main_mem, int core_num)
 	case (invalid):
 		create_bus_request(core, core_num, address_format, bus_rd, 0x0);
 		core->bus_request.flush_reason = busrd_flush;
+		update_statistics(core, READ_MISS_CODE);
 		return MISS_CODE;	// miss
 		// return indication to wait for the bus request
 		// moving to Shared or Exclusive state is updated by the return signal in bus_shared, after 16 cycles
@@ -181,6 +161,7 @@ int read_mem(core *core, int *main_mem, int core_num)
 	
 }
 
+// When sw needs access to memory
 int write_mem(core *core, int core_num)
 {
 	int read_address = core->core_pipeline[EX_MEM].current_ALU_output;
@@ -205,7 +186,7 @@ int write_mem(core *core, int core_num)
 		if (cache_hit)
 		{
 			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit, write and move mesi to modified.
-			core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+			core->core_cache.tsram[tsram_index].next_MESI_state = modified; // TOOD delete
 			create_bus_request(core, core_num, address_format, bus_rdx, 0x0);
 			core->bus_request.flush_reason = busrdx_flush;
 			// maybe update_statistics
@@ -216,7 +197,7 @@ int write_mem(core *core, int core_num)
 		// in case shared, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
 		create_bus_request(core, core_num, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
 		core->bus_request.flush_reason = busrdx_flush;
-		core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+		core->core_cache.tsram[tsram_index].next_MESI_state = modified; // TOOD delete
 		update_statistics(core, WRITE_MISS_CODE);
 		return MISS_CODE;
 
@@ -234,7 +215,7 @@ int write_mem(core *core, int core_num)
 		// in case exclusive, if there's a write miss (conflict miss), all we have to do is just eviction of current block and stall core until data returns
 		create_bus_request(core, core_num, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
 		core->bus_request.flush_reason = busrdx_flush;
-		core->core_cache.tsram[tsram_index].next_MESI_state = modified;
+		core->core_cache.tsram[tsram_index].next_MESI_state = modified; // TOOD delete
 		update_statistics(core, WRITE_MISS_CODE);
 		return MISS_CODE;
 
@@ -263,6 +244,7 @@ int write_mem(core *core, int core_num)
 	}
 }
 
+// Bus snooper, checks if there's anything relevant on bus for specific core.
 bool core_snoop_bus(core *core, int core_num, msi_bus *bus, bool *shared_flags)	
 {
 	msi_bus pending_request = core->bus_request;

@@ -1,5 +1,5 @@
-cycles 806
-instructions 1604
+cycles 805
+instructions 801
 read_hit 0
 write_hit 0
 read_miss 0

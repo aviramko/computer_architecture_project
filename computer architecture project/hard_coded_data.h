@@ -3,41 +3,17 @@
 
 #include <stdbool.h>
 
-
 typedef struct _cache cache;
 
 #define MISS_CODE -1
 #define HIT_CODE 0
 
-#define SUCCESS_CODE 0 // yuval
-#define ERROR_CODE -1 //yuval
-#define MESI_ERROR -2
+#define SUCCESS_CODE 0
+#define ERROR_CODE -1
 
 #define NUM_OF_REGS 16
 #define MAX_IMEM_LINES 1024
 #define PIPELINE_BUFFERS_NUM 4
-
-#define NO_VALUE_CODE -1
-#define UNVALID_REQUEST_CODE 0 // yuval
-#define VALID_REQUEST_CODE 1 // yuval
-
-//#define BUS_FLUSH_CODE 3
-
-#define NO_STATE_CODE -1
-
-// Core Codes
-#define MEMORY_ORIGIN_CODE 4
-
-// Bus Codes
-#define BUS_NO_CMD_CODE 0
-#define BUS_RD_CODE 1
-#define BUS_RDX_CODE 2
-#define BUS_FLUSH_CODE 3
-
-#define NO_BUS_REQUEST_CODE 0
-#define PENDING_SEND_CODE 1
-#define WAITING_FLUSH_CODE 2
-#define PENDING_WB_SEND_CODE 3
 
 #define EMPTY_DATA_FIELD 0
 
@@ -51,28 +27,19 @@ typedef struct _cache cache;
 
 #define TSRAM_SIZE 64
 
-#define MESI_INVALID 0
-#define MESI_SHARED 1
-#define MESI_EXCLUSIVE 2
-#define MESI_MODIFIED 3
-
 #define BUS_SHARED 1
 #define BUS_NOT_SHARED 0
-
-// Blocks Status Codes
-#define VALID_BLOCK_CODE 0
-#define DIRTY_BLOCK_CODE 1
-
-/*// Clock cycle actions
-#define HALT -1
-#define STALL 0
-#define CONTINUE 1*/
 
 // Status Codes
 #define READ_MISS_CODE 0
 #define READ_HIT_CODE 1
 #define WRITE_MISS_CODE 2
 #define WRITE_HIT_CODE 3
+
+#define MAX_IMEM_LINE_WIDTH 10
+
+#define TRACE_FILE_LINE_LEN 200
+#define STAGE_FORMAT 4
 
 #define MAIN_MEM_ANSWER_CYCLES 16 
 #define FLUSH_CYCLES 4
@@ -195,7 +162,7 @@ typedef enum _flush_cause {
 typedef struct tsram_entry {
 	unsigned int tag;
 	unsigned int MESI_state;
-	unsigned int next_MESI_state;
+	unsigned int next_MESI_state; // TOOD delete
 	bool valid;
 } tsram_entry;
 
@@ -260,14 +227,14 @@ typedef struct MSI_bus
 typedef struct MSI_bus_FF {
 	msi_bus old_bus;
 	msi_bus new_bus;
-} msi_bus_ff;
+} msi_bus_ff; // TODO delete
 
 struct _core {
 	cache core_cache;
 	instruction core_imem[MAX_IMEM_LINES];
-	statistics stat; // yuval
-	msi_bus bus_request; // yuval
-	int bus_request_status; // yuval
+	statistics stat;
+	msi_bus bus_request;
+	//int bus_request_status; // TOOD delete
 	int core_registers[NUM_OF_REGS];
 	int current_core_registers[NUM_OF_REGS];
 	int core_imem_length;
@@ -280,7 +247,6 @@ struct _core {
 	bool halt_PC;
 	bool mem_stall;
 	bool mem_completed;
-	char* imem_file;
 };
 typedef struct _core core;
 

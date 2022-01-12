@@ -6,8 +6,7 @@
 
 #include "utils.h"
 
-// yuval
-// Gets address struct and returns its dec value.
+// Gets address struct and returns its dec value
 int address_to_integer(address addr) 
 {
 	int result = addr.tag;
@@ -19,6 +18,7 @@ int address_to_integer(address addr)
 	return result;
 }
 
+// Initialize file paths
 void initialize_args_files(char* args_files[ARGS_EXPECTED_NUM - 1], int args_num, char* args_values[])
 {
 	if (args_num != ARGS_EXPECTED_NUM)
@@ -56,7 +56,7 @@ void initialize_args_files(char* args_files[ARGS_EXPECTED_NUM - 1], int args_num
 		args_files[i] = args_values[i + 1];
 }
 
-// Initializing int array from a file. return memory length
+// Initializing int array from a file
 int initialize_array_from_file(char* file_name, int* memory_array, int max_array_size)
 {
 	int i = 0;
@@ -73,6 +73,47 @@ int initialize_array_from_file(char* file_name, int* memory_array, int max_array
 	return SUCCESS_CODE;
 }
 
+// Aiding function to write_coretrace
+void format_stage_trace(bool valid, bool stalled, bool halt, char* str, int num)
+{
+	if (!valid || stalled || halt)
+	{
+		sprintf(str, "---");
+	}
+	else
+	{
+		sprintf(str, "%03X", num);
+	}
+}
+
+// Writes to coretrace file
+void write_coretrace(core* core, FILE* trace_file)
+{
+	char str[TRACE_FILE_LINE_LEN];
+	int clock_count = core->clock_cycle_count;
+
+	pipeline_stage* core_pipeline = core->core_pipeline;
+	char fetch[STAGE_FORMAT];
+	char decode[STAGE_FORMAT];
+	char execute[STAGE_FORMAT];
+	char memory[STAGE_FORMAT];
+	char write_back[STAGE_FORMAT];
+
+	format_stage_trace(true, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, fetch, core->fetch_old_PC);
+	format_stage_trace(core_pipeline[IF_ID].valid, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, decode, core_pipeline[IF_ID].current_instruction.PC);
+	format_stage_trace(core_pipeline[ID_EX].valid, core_pipeline[ID_EX].current_instruction.stalled, core_pipeline[ID_EX].halt, execute, core_pipeline[ID_EX].current_instruction.PC);
+	format_stage_trace(core_pipeline[EX_MEM].valid, core_pipeline[EX_MEM].current_instruction.stalled, core_pipeline[EX_MEM].halt, memory, core_pipeline[EX_MEM].current_instruction.PC);
+	format_stage_trace(core_pipeline[MEM_WB].valid, core_pipeline[MEM_WB].current_instruction.stalled, core_pipeline[MEM_WB].halt, write_back, core_pipeline[MEM_WB].current_instruction.PC);
+
+	int* regs = core->current_core_registers;
+
+	sprintf(str, "%d %s %s %s %s %s %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X \n",
+		clock_count, fetch, decode, execute, memory, write_back, regs[R2], regs[R3], regs[R4], regs[R5],
+		regs[R6], regs[R7], regs[R8], regs[R9], regs[R10], regs[R11], regs[R12], regs[R13], regs[R14], regs[R15]);
+
+	fputs(str, trace_file);
+}
+
 // Writes to bustrace file
 int write_bustrace(msi_bus* bus, int cycle, char* bustrace_file)
 {
@@ -84,7 +125,7 @@ int write_bustrace(msi_bus* bus, int cycle, char* bustrace_file)
 		return ERROR_CODE;
 	}
 
-	if (bus->bus_cmd != BUS_NO_CMD_CODE)
+	if (bus->bus_cmd != no_cmd)
 		fprintf(file_pointer, "%d %01X %01X %03X%02X %08X %01X\n", cycle, bus->bus_origid, bus->bus_cmd, bus->bus_addr.tag, bus->bus_addr.index, bus->bus_data, bus->bus_shared);
 
 	fclose(file_pointer);

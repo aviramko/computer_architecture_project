@@ -10,6 +10,8 @@ void initialize_args_files(char* args_files[ARGS_EXPECTED_NUM - 1], int args_num
 
 int initialize_array_from_file(char* file_name, int* memory_array, int max_array_size);
 
+void write_coretrace(core* core, FILE* trace_file);
+
 int write_bustrace(msi_bus* bus, int cycle, char* bustrace_file);
 
 int write_files(core* cores, char* args_files[ARGS_EXPECTED_NUM - 1], int main_mem[MAIN_MEM_SIZE]);

@@ -1,14 +1,13 @@
 #define _CRT_SECURE_NO_DEPRECATE
 
-//#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 #include "parser.h"
 
-#define MAX_IMEM_LINE_WIDTH 10
-
-void remove_spaces(char* s) {
+// Aiding function to parse_line_to_mem()
+void remove_spaces(char* s) 
+{
 	char* d = s;
 	do
 	{
@@ -19,6 +18,7 @@ void remove_spaces(char* s) {
 	} while (*s++ = *d++);
 }
 
+// Tranlate line to command
 void parse_line_to_mem(core* core, char* line_buffer, int imem_index)
 {
 
@@ -36,6 +36,7 @@ void parse_line_to_mem(core* core, char* line_buffer, int imem_index)
 	core->core_imem[imem_index].stalled = false;
 }
 
+// Reads imem files
 void parse_imem_file(core* core, char* imem_filename)
 {
 	FILE* ptr_imem_file = fopen(imem_filename, "r");

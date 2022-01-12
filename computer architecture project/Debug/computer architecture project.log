@@ -1,5 +1,2 @@
-﻿  cache.c
-C:\Users\avira\source\repos\proj_09.01\computer_architecture_project\computer architecture project\cache.c(182): warning C4715: 'read_mem': not all control paths return a value
-C:\Users\avira\source\repos\proj_09.01\computer_architecture_project\computer architecture project\cache.c(319): warning C4715: 'core_snoop_bus': not all control paths return a value
-C:\Users\avira\source\repos\proj_09.01\computer_architecture_project\computer architecture project\cache.c(264): warning C4715: 'write_mem': not all control paths return a value
-  computer architecture project.vcxproj -> C:\Users\avira\source\repos\proj_09.01\computer_architecture_project\Debug\computer architecture project.exe
+﻿  core.c
+  computer architecture project.vcxproj -> C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\Debug\computer architecture project.exe

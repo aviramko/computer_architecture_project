@@ -1,20 +1,15 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_DEPRECATE
 
-//#include <stdio.h>
 #include <stdlib.h>
 
 #include "parser.h"
 #include "core.h"
 
-#define TRACE_FILE_LINE_LEN 200	// more than enough
-#define STAGE_FORMAT 4
-
-//////////////////////// yuval
-
+// Initalizing the statistics for each core
 void initialize_core_statistics(core* core)
 {
-	core->stat.cycles = 1;
+	core->stat.cycles = 0;
 	core->stat.instructions = 0;
 	core->stat.read_hit = 0;
 	core->stat.write_hit = 0;
@@ -24,8 +19,7 @@ void initialize_core_statistics(core* core)
 	core->stat.mem_stall = 0;
 }
 
-////////////////////////////
-
+// Initializing the registers for each core
 void initialize_core_regs(core *core)
 {
 	for (int i = 0; i < NUM_OF_REGS; i++)
@@ -34,6 +28,7 @@ void initialize_core_regs(core *core)
 	}
 }
 
+// Initializing the pipeline for each core
 void initialize_core_pipeline(core *core) 
 {
 	for (int i = 0; i < PIPELINE_BUFFERS_NUM; i++)
@@ -51,6 +46,7 @@ void initialize_core_pipeline(core *core)
 	}
 }
 
+// Initializing the entire core struct
 void initialize_core(core *core, char *imem_filename)
 {
 	initialize_core_regs(core);
@@ -65,11 +61,12 @@ void initialize_core(core *core, char *imem_filename)
 	core->core_halt = false;
 	core->hazard = false;
 	core->halt_PC = false;
-	core->bus_request_status = NO_BUS_REQUEST_CODE;
+	//core->bus_request_status = NO_BUS_REQUEST_CODE;
 	core->mem_stall = false;
 	core->mem_completed = false;
 }
 
+// Check if the current pipeline stage is valid
 bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 {
 	instruction current_instruction = core->core_pipeline[pipe_buffer].current_instruction;
@@ -86,6 +83,7 @@ bool check_stage_validity(core *core, ePIPIELINE_BUFFERS pipe_buffer)
 	return true;
 }
 
+// check for pipeline hazards at the current cycle for specific core
 void check_hazards(core* core)
 {
 	if ((core->core_pipeline[EX_MEM].current_instruction.rd == R0 && core->core_pipeline[ID_EX].current_instruction.rs == R0)
@@ -241,6 +239,7 @@ void check_hazards(core* core)
 	}
 }
 
+// IF stage in the pipeline
 void fetch(core* core)
 {
 	core->fetch_old_PC = core->next_PC;		// save fetch stage old PC before it's altered, for trace purposes
@@ -248,6 +247,7 @@ void fetch(core* core)
 	core->next_PC += 1;		// take old PC, given there is no branch taken at this cycle. If branch is taken, next_PC is updated in decode stage
 }
 
+// Perform branch resolution in the pipeline
 void check_branch(core* core)
 {
 	instruction current_instruction = core->core_pipeline[IF_ID].current_instruction;
@@ -305,6 +305,7 @@ void check_branch(core* core)
 	}
 }
 
+// ID stage in the pipeline
 void decode(core* core)
 {
 	bool valid_stage = check_stage_validity(core, IF_ID);
@@ -322,10 +323,10 @@ void decode(core* core)
 		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[ID_EX].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction.stalled = true;
 
-		instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
-		bool stalled = current_instruction.stalled;
-		if (!stalled)
-			core->stat.decode_stall;
+		//instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
+		//bool stalled = current_instruction.stalled;
+		if (!core->mem_stall)
+			core->stat.decode_stall++;
 	}
 	else
 	{
@@ -334,6 +335,7 @@ void decode(core* core)
 	}
 }
 
+// EX stage in the pipeline
 void execute(core* core)
 {
 	bool valid_stage = check_stage_validity(core, ID_EX);
@@ -356,7 +358,7 @@ void execute(core* core)
 	}
 
 	instruction current_instruction = core->core_pipeline[ID_EX].current_instruction;
-	core->stat.instructions++;
+	//core->stat.instructions++;
 	int current_opcode = current_instruction.opcode;
 	int ALU_output = 0;
 
@@ -417,6 +419,7 @@ void execute(core* core)
 	core->core_pipeline[EX_MEM].new_ALU_output = ALU_output;
 }
 
+// MEM stage in the pipeline
 void memory(core* core, int *main_mem, int core_num)
 {
 	bool valid_stage = check_stage_validity(core, EX_MEM);
@@ -436,7 +439,7 @@ void memory(core* core, int *main_mem, int core_num)
 	if (stalled)
 	{
 		core->core_pipeline[MEM_WB].new_instruction = core->core_pipeline[EX_MEM].current_instruction;
-		core->stat.mem_stall++;
+		//core->stat.mem_stall++;
 		return;
 	}
 
@@ -448,6 +451,7 @@ void memory(core* core, int *main_mem, int core_num)
 		{
 			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
+			//core->stat.mem_stall++;
 			core->next_PC = core->fetch_old_PC;
 			return;
 		}
@@ -464,6 +468,7 @@ void memory(core* core, int *main_mem, int core_num)
 			// stall core
 			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
+			//core->stat.mem_stall++;
 			core->next_PC = core->fetch_old_PC;
 			return;
 		}
@@ -486,6 +491,7 @@ void memory(core* core, int *main_mem, int core_num)
 	core->core_pipeline[MEM_WB].new_ALU_output = core->core_pipeline[EX_MEM].current_ALU_output;
 }
 
+// WB stage in the pipeline
 void write_back(core* core)
 {
 	bool valid_stage = check_stage_validity(core, MEM_WB);
@@ -543,11 +549,13 @@ void write_back(core* core)
 	return;
 }
 
+// Moving values to the next stage on pipeline
 void update_stage_buffers(core* core)
 {
 	if (core->mem_stall)	//special case for memory stall, WB stage can continue
 	{
 		core->core_pipeline[MEM_WB].current_instruction = core->core_pipeline[MEM_WB].new_instruction;
+		core->stat.mem_stall++;
 		return;
 	}
 	// update instructions
@@ -565,46 +573,7 @@ void update_stage_buffers(core* core)
 	core->stat.cycles++;
 }
 
-void format_stage_trace(bool valid, bool stalled, bool halt, char* str, int num)
-{
-	if (!valid || stalled || halt)
-	{
-		sprintf(str, "---");
-	}
-	else
-	{
-		sprintf(str, "%03X", num);
-	}
-}
-
-// Writes to coretrace file
-void write_trace(core* core, FILE* trace_file)
-{
-	char str[TRACE_FILE_LINE_LEN];
-	int clock_count = core->clock_cycle_count;
-
-	pipeline_stage* core_pipeline = core->core_pipeline;
-	char fetch[STAGE_FORMAT];
-	char decode[STAGE_FORMAT];
-	char execute[STAGE_FORMAT];
-	char memory[STAGE_FORMAT];
-	char write_back[STAGE_FORMAT];
-
-	format_stage_trace(true, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, fetch, core->fetch_old_PC);
-	format_stage_trace(core_pipeline[IF_ID].valid, core_pipeline[IF_ID].current_instruction.stalled, core_pipeline[IF_ID].halt, decode, core_pipeline[IF_ID].current_instruction.PC);
-	format_stage_trace(core_pipeline[ID_EX].valid, core_pipeline[ID_EX].current_instruction.stalled, core_pipeline[ID_EX].halt, execute, core_pipeline[ID_EX].current_instruction.PC);
-	format_stage_trace(core_pipeline[EX_MEM].valid, core_pipeline[EX_MEM].current_instruction.stalled, core_pipeline[EX_MEM].halt, memory, core_pipeline[EX_MEM].current_instruction.PC);
-	format_stage_trace(core_pipeline[MEM_WB].valid, core_pipeline[MEM_WB].current_instruction.stalled, core_pipeline[MEM_WB].halt, write_back, core_pipeline[MEM_WB].current_instruction.PC);
-
-	int* regs = core->current_core_registers;
-
-	sprintf(str, "%d %s %s %s %s %s %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X %08X \n",
-		clock_count, fetch, decode, execute, memory, write_back, regs[R2], regs[R3], regs[R4], regs[R5],
-		regs[R6], regs[R7], regs[R8], regs[R9], regs[R10], regs[R11], regs[R12], regs[R13], regs[R14], regs[R15]);
-
-	fputs(str, trace_file);
-}
-
+// Copies the core registers
 void copy_regs(core* core)
 {
 	for (int i = 0; i < NUM_OF_REGS; i++)
@@ -613,6 +582,7 @@ void copy_regs(core* core)
 	}
 }
 
+// Activates pipeline for specific core
 void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem, int core_num)
 {
 	if (core->core_halt)
@@ -620,22 +590,23 @@ void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem, int core_
 	
 	if (core->mem_stall)
 	{
-		write_trace(core, trace_file);
+		write_coretrace(core, trace_file);
 		core->clock_cycle_count++;
 		return; // in this case, stall core completely, only write its trace
 	}
-	copy_regs(core);				// snapshot core regs at the beginning of the clock cycle
+	copy_regs(core); // snapshot core regs at the beginning of the clock cycle
 	fetch(core);
 	decode(core);
 	execute(core);
 	memory(core, main_mem, core_num);
 	write_back(core);
-	write_trace(core, trace_file);
+	write_coretrace(core, trace_file);
 	update_stage_buffers(core);
 	core->clock_cycle_count++;
 	core->hazard = false;
 }
 
+// Checks if all cores are halted
 bool all_cores_halt(core cores[CORES_NUM])
 {
 	int count = 0;
