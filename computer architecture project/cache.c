@@ -186,11 +186,11 @@ int write_mem(core *core, int core_num)
 	int read_address = core->core_pipeline[EX_MEM].current_ALU_output;
 	int index = read_address & 0xFF;
 	int tag = (read_address >> 8) & 0xFFF;
-	int tsram_index = index / 4;
+	const int tsram_index = index / 4;
 
 	bool cache_hit = mem_block_search(core->core_cache.tsram, tsram_index, tag);
 	address address_format = { index, tag };
-	// using BusRdX is a read request, so no data is supposed to be written on bus_data
+	// using BusRdX is a read request, so no data is supposed to be written on bus_data // 2F - tsram_index is changed here
 	switch (core->core_cache.tsram[tsram_index].MESI_state)
 	{
 	case (invalid):
@@ -199,6 +199,7 @@ int write_mem(core *core, int core_num)
 		//core->core_cache.tsram[tsram_index].next_MESI_state = modified;
 		update_statistics(core, WRITE_MISS_CODE);
 		return MISS_CODE;
+		break;
 
 	case (shared):
 		if (cache_hit)
@@ -223,6 +224,7 @@ int write_mem(core *core, int core_num)
 
 		if (cache_hit)
 		{
+			//printf("tsram_index = %d", tsram_index);
 			core->core_cache.tsram[tsram_index].MESI_state = modified;
 			core->core_cache.dsram[index] = core->core_registers[core->core_pipeline[EX_MEM].current_instruction.rd];	//hit
 			update_statistics(core, WRITE_HIT_CODE);
@@ -258,54 +260,6 @@ int write_mem(core *core, int core_num)
 		create_bus_request(core, core_num, main_mem_address_formatted, write_miss_flush_request, 0x0);	//miss
 		update_statistics(core, WRITE_MISS_CODE);
 		return MISS_CODE;
-	}
-}
-
-void core_bus_snooper(core *core, int core_num, msi_bus *bus)
-{
-	int read_address = core->core_pipeline[EX_MEM].current_ALU_output;
-	int index = read_address & 0xFF;
-	int tag = (read_address >> 8) & 0xFFF;
-	
-	if (bus->bus_cmd == BUS_NO_CMD_CODE)
-		return;
-	
-	if (bus->bus_origid == core_num)
-	{
-		if (core->bus_request_status == PENDING_WB_SEND_CODE) 
-		{
-			core->bus_request_status = NO_BUS_REQUEST_CODE;
-			// function to clean cache data
-		}
-
-		else if (core->bus_request_status == PENDING_SEND_CODE)
-		{
-			core->bus_request_status = WAITING_FLUSH_CODE;
-			
-			if (bus->bus_cmd == BUS_FLUSH_CODE)
-			{
-				// update MESI state
-				core->bus_request_status = NO_BUS_REQUEST_CODE;
-			}
-		}
-	}
-	else
-	{
-		if ((bus->bus_cmd == BUS_FLUSH_CODE) && (core->bus_request_status == WAITING_FLUSH_CODE) &&
-			(core->bus_request.bus_addr.index == bus->bus_addr.index) && (core->bus_request.bus_addr.tag == bus->bus_addr.tag))
-		{
-			// check if request not valid
-				//cancel_memory_request(core_num);
-			
-			// function to clean cache data
-			// function to add cache data
-			core->bus_request_status = NO_BUS_REQUEST_CODE;
-		}
-		else if (core->bus_request_status == NO_BUS_REQUEST_CODE && mem_block_search(core->core_cache.tsram,index,tag))
-		{
-			// && core->core_cache.tsram[index].MESI_state)
-			// handle each state
-		}
 	}
 }
 

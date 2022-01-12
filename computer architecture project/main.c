@@ -29,12 +29,7 @@ int main(int argc, char* argv[])
 	FILE *core_traces[CORES_NUM];
 	
 	FILE *tmp_fp= fopen(args_files[14], "w");
-	///if (ret != SUCCESS_CODE)
-	///{
-	///	printf("ERROR: cannot delete file '%s'\n", args_files[14]);
-	///	return ERROR_CODE;
-	///}
-	/// 
+
 	fclose(tmp_fp);
 
 	for (int i = 0; i < CORES_NUM; i++)
@@ -43,27 +38,14 @@ int main(int argc, char* argv[])
 		core_traces[i] = fopen(args_files[10 + i], "w");
 	}
 
-	//initialize_core(&cores[0], argv[1]);
-
 	while (!all_cores_halt(cores)) // all cores halt
 	{
-		//main_memory_bus_snooper(cores, bus, cycle, main_mem, valid_request, memory_request_cycle);
-
 		for (int core_num = 0; core_num < CORES_NUM; core_num++)
 			simulate_clock_cycle(&cores[core_num], core_traces[core_num], main_mem, core_num);
-		//simulate_clock_cycle(&cores[0], fp_core0trace, main_mem);
 
 		update_bus(cores, &bus, cycle, &next_RR, valid_request, memory_request_cycle, main_mem);
 
-		//for(i=0; i<CORES_NUM; i++)
-		// core_bus_snooper
-
-		//write_bustrace?
-
 		cycle++;
-
-		//do_bus_and_main_mem_stuff(&core0, main_mem, bus, memory_bus_request);
-		//do_bus_and_main_mem_stuff(cores_array, main_mem_array, bus);
 	}
 
 	// print to files

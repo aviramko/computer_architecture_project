@@ -114,7 +114,6 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		bus->bus_origid = main_mem_origid;
 		bus->bus_addr = main_mem_address_formatted;
 
-		//write_bustrace(bus, cycle, "bustrace.txt");
 	}
 	
 	// check flush, and execute if needed
