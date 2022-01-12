@@ -198,7 +198,7 @@ int write_mem(core *core, int core_num)
 		create_bus_request(core, core_num, address_format, bus_rdx, 0x0);	// get exclusive access to write this block, write only when data arrived
 		core->bus_request.flush_reason = busrdx_flush;
 		core->core_cache.tsram[tsram_index].next_MESI_state = modified; // TOOD delete
-		update_statistics(core, WRITE_MISS_CODE);
+		update_statistics(core, WRITE_MISS_CODE); // TODO change
 		return MISS_CODE;
 
 	case (exclusive):
@@ -220,7 +220,7 @@ int write_mem(core *core, int core_num)
 		return MISS_CODE;
 
 	case (modified):
-
+	{
 		if (cache_hit)
 		{
 			core->core_cache.tsram[tsram_index].MESI_state = modified;
@@ -242,16 +242,17 @@ int write_mem(core *core, int core_num)
 		update_statistics(core, WRITE_MISS_CODE);
 		return MISS_CODE;
 	}
+	}
 }
 
 // Bus snooper, checks if there's anything relevant on bus for specific core.
-bool core_snoop_bus(core *core, int core_num, msi_bus *bus, bool *shared_flags)	
+bool core_snoop_bus(core *requesting_core, core *snooping_core, int snooping_core_num, msi_bus *bus, bool *shared_flags)	
 {
-	msi_bus pending_request = core->bus_request;
+	msi_bus pending_request = requesting_core->bus_request;
 
 	int dsram_index = pending_request.bus_addr.index;
 	int tsram_index = dsram_index / BLOCK_SIZE;
-	tsram_entry core_tsram_entry = core->core_cache.tsram[tsram_index];
+	tsram_entry core_tsram_entry = snooping_core->core_cache.tsram[tsram_index];
 	int core_tag = core_tsram_entry.tag;
 	int request_tag = pending_request.bus_addr.tag;
 
@@ -270,30 +271,30 @@ bool core_snoop_bus(core *core, int core_num, msi_bus *bus, bool *shared_flags)
 		switch (core_tsram_entry.MESI_state)
 		{
 		case (modified):
-			core->core_cache.tsram[tsram_index].MESI_state = invalid;
-			core->bus_request.flush_reason = busrdx_flush;
+			snooping_core->core_cache.tsram[tsram_index].MESI_state = invalid;
+			snooping_core->bus_request.flush_reason = busrdx_flush;
 			return flush_request;	// flush for this core
 			break;
 		case (exclusive):
 		case (shared):
-			core->core_cache.tsram[tsram_index].MESI_state = invalid;
+			snooping_core->core_cache.tsram[tsram_index].MESI_state = invalid;
 			return original_request;
 			break;
 		}
 	}
 	else
 	{
-		shared_flags[core_num] = true;
+		shared_flags[snooping_core_num] = true;
 		switch (core_tsram_entry.MESI_state)
 		{
 		case (modified):
-			core->core_cache.tsram[tsram_index].MESI_state = shared;
-			core->bus_request.flush_reason = busrd_flush;
+			snooping_core->core_cache.tsram[tsram_index].MESI_state = shared;
+			snooping_core->bus_request.flush_reason = busrd_flush;
 			return flush_request;	// flush for this core
 			break;
 		case (exclusive):
 		case (shared):
-			core->core_cache.tsram[tsram_index].MESI_state = shared;
+			snooping_core->core_cache.tsram[tsram_index].MESI_state = shared;
 			return original_request;
 			break;
 		}

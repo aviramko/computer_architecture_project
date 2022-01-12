@@ -318,15 +318,15 @@ void decode(core* core)
 	check_hazards(core);
 	if (core->hazard)
 	{
-		core->next_PC = core->fetch_old_PC;		// not sure if need to add old PC if after branch //2F - change to: core->next_PC -= 1;	
+		core->next_PC = core->fetch_old_PC;		// not sure if need to add old PC if after branch
 		core->core_pipeline[IF_ID].new_instruction = core->core_pipeline[IF_ID].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[ID_EX].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction.stalled = true;
 
 		//instruction current_instruction = core->core_pipeline[EX_MEM].current_instruction;
 		//bool stalled = current_instruction.stalled;
-		if (!core->mem_stall)
-			core->stat.decode_stall++;
+		//if (!core->mem_stall)
+		core->stat.decode_stall++;
 	}
 	else
 	{
@@ -555,7 +555,8 @@ void update_stage_buffers(core* core)
 	if (core->mem_stall)	//special case for memory stall, WB stage can continue
 	{
 		core->core_pipeline[MEM_WB].current_instruction = core->core_pipeline[MEM_WB].new_instruction;
-		core->stat.mem_stall++;
+		//core->stat.mem_stall++;
+		core->stat.cycles++;
 		return;
 	}
 	// update instructions
@@ -592,6 +593,7 @@ void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem, int core_
 	{
 		write_coretrace(core, trace_file);
 		core->clock_cycle_count++;
+		core->stat.mem_stall++;
 		return; // in this case, stall core completely, only write its trace
 	}
 	copy_regs(core); // snapshot core regs at the beginning of the clock cycle

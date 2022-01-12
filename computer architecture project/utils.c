@@ -162,7 +162,8 @@ int write_stats(core* core, char* stats_file)
 		return ERROR_CODE;
 	}
 
-	fprintf(file_pointer, "cycles %d\n", core->stat.cycles);
+	//fprintf(file_pointer, "cycles %d\n", core->stat.cycles);
+	fprintf(file_pointer, "cycles %d\n", core->clock_cycle_count - 1);
 	fprintf(file_pointer, "instructions %d\n", core->stat.instructions);
 	fprintf(file_pointer, "read_hit %d\n", core->stat.read_hit);
 	fprintf(file_pointer, "write_hit %d\n", core->stat.write_hit);

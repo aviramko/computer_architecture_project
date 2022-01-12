@@ -300,7 +300,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 	// 3. if other cache has the block Shared in it, next mesi_state will be the same (Shared), no flush is needed.
 
 	bool shared_flags[CORES_NUM] = { false, false, false, false };
-	bool flush = false;
+	bool change_to_flush = false;
 	int flushing_core;
 	
 	for (i = 0; i < CORES_NUM; i++)
@@ -309,8 +309,9 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 		{
 			continue;
 		}
-		flush = core_snoop_bus(&(cores[i]), core_num, bus, shared_flags);
-		if (flush)
+		//flush = core_snoop_bus(&(cores[i]), core_num, bus, shared_flags);
+		change_to_flush = core_snoop_bus(&(cores[core_num]), &(cores[i]), i, bus, shared_flags);
+		if (change_to_flush)
 		{
 			flushing_core = i;
 			break;
@@ -321,7 +322,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 	*bus = cores[core_num].bus_request;
 	write_bustrace(bus, cycle, "bustrace.txt"); // write the bus request, before we might change it to flush 
 
-	if (flush) // change xaction to flush
+	if (change_to_flush) // change xaction to flush
 	{
 		bus->flush_to = bus->bus_origid;
 		bus->bus_origid = flushing_core;
@@ -334,6 +335,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 			bus->bus_shared = BUS_NOT_SHARED;
 		}
 		bus->bus_cmd = flush;
+		bus->cycles_left = FLUSH_CYCLES - 1;
 
 		// calculate beginning of block address
 		int index = cores[core_num].bus_request.bus_addr.index;

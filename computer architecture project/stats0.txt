@@ -1,4 +1,4 @@
-cycles 805
+cycles 804
 instructions 801
 read_hit 0
 write_hit 0

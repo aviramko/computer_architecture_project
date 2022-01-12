@@ -1,4 +1,4 @@
-cycles 705
+cycles 704
 instructions 501
 read_hit 0
 write_hit 0
