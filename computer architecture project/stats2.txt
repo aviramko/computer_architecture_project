@@ -1,6 +1,6 @@
-cycles 1320
-instructions 1220
-read_hit 202
+cycles 1220
+instructions 1020
+read_hit 102
 write_hit 102
 read_miss 0
 write_miss 1

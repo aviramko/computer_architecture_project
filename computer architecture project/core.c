@@ -255,9 +255,11 @@ void check_branch(core* core)
 		return;
 	}
 
-	int rs_value = core->core_registers[current_instruction.rs];
+	//int rs_value = core->core_registers[current_instruction.rs];
+	int rs_value = (current_instruction.rs == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rs];	// if rs = 1 then take immediate value
 	int rt_value = (current_instruction.rt == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rt];	// if rt = 1 then take immediate value
-	int next_branch_PC = core->core_registers[current_instruction.rd] & 0x3FF; // R[rd][9:0]
+	int rd_value = (current_instruction.rd == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rd];	// if rd = 1 then take immediate value
+	int next_branch_PC = rd_value & 0x3FF; // R[rd][9:0]
 
 	switch (opcode)
 	{
@@ -356,8 +358,9 @@ void execute(core* core)
 	int ALU_output = 0;
 
 
-	int rs_value = core->core_registers[current_instruction.rs];
+	//int rs_value = core->core_registers[current_instruction.rs];
 	int rt_value = (current_instruction.rt == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rt];	// if rt = 1 then take immediate value
+	int rs_value = (current_instruction.rs == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rs];	// if rs = 1 then take immediate value
 
 	switch (current_opcode)
 	{
@@ -463,15 +466,16 @@ void memory(core* core, int *main_mem, int core_num)
 		}
 		else
 		{
-			int reg = current_instruction.rd;
-			if (reg == R0)
+			//int reg = current_instruction.rd;
+			int rd_val = (current_instruction.rd == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rd];	// if rd = 1 then take immediate value
+			if (current_instruction.rd == R0)
 			{
 				return;
 			}
 			int write_address = core->core_pipeline[EX_MEM].current_ALU_output;
 			int index = write_address & 0xFF;
 
-			core->core_cache.dsram[index] = core->core_registers[reg]; // MEM[R[rs]+R[rt]] = R[rd]
+			core->core_cache.dsram[index] = rd_val; // MEM[R[rs]+R[rt]] = R[rd]
 		}
 	}
 
@@ -529,7 +533,8 @@ void write_back(core* core)
 	else if (current_instruction.opcode == jal)
 	{
 		core->core_registers[R15] = core->core_pipeline[MEM_WB].new_instruction.PC;
-		int next_PC = core->core_registers[current_instruction.rd] & 0x3FF; // R[rd][9:0]
+		int rd_val = (current_instruction.rd == 0x1) ? current_instruction.immediate : core->core_registers[current_instruction.rd];
+		int next_PC = rd_val & 0x3FF; // R[rd][9:0]
 	}
 
 	return;
