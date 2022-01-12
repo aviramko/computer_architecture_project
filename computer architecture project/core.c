@@ -95,6 +95,7 @@ void check_hazards(core* core)
 		|| (core->core_pipeline[MEM_WB].current_instruction.rd == R0 && core->core_pipeline[IF_ID].current_instruction.rs == R0))
 		return;
 
+	// Data hazards (NO LOAD)
 	if (core->core_pipeline[EX_MEM].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rs
 		&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[ID_EX].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
 		&& !core->core_pipeline[ID_EX].halt)
@@ -135,6 +136,105 @@ void check_hazards(core* core)
 		&& !core->core_pipeline[IF_ID].halt)
 	{
 		core->hazard = true;
+	}
+
+	// LOAD-USE HAZARDS
+	if ((core->core_pipeline[ID_EX].current_instruction.opcode == lw) || (core->core_pipeline[EX_MEM].current_instruction.opcode == lw) ||
+		(core->core_pipeline[MEM_WB].current_instruction.opcode == lw))
+	{
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rd
+			&& core->core_pipeline[ID_EX].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[ID_EX].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rt
+			&& core->core_pipeline[ID_EX].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[ID_EX].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rs
+			&& core->core_pipeline[ID_EX].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[ID_EX].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		////////
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[EX_MEM].current_instruction.rd
+			&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[EX_MEM].current_instruction.rt
+			&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[EX_MEM].current_instruction.rs
+			&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		///
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[MEM_WB].current_instruction.rd
+			&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[MEM_WB].current_instruction.rt
+			&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[MEM_WB].current_instruction.rs
+			&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+	}
+
+	// USE-STORE HAZARDS
+	if ((core->core_pipeline[ID_EX].current_instruction.opcode == sw) || (core->core_pipeline[EX_MEM].current_instruction.opcode == sw) ||
+		(core->core_pipeline[MEM_WB].current_instruction.opcode == sw))
+	{
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[ID_EX].current_instruction.rd
+			&& core->core_pipeline[ID_EX].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[ID_EX].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[EX_MEM].current_instruction.rd
+			&& core->core_pipeline[EX_MEM].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[EX_MEM].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
+
+		if (core->core_pipeline[IF_ID].current_instruction.rd == core->core_pipeline[MEM_WB].current_instruction.rd
+			&& core->core_pipeline[MEM_WB].valid && core->core_pipeline[IF_ID].valid && !core->core_pipeline[MEM_WB].current_instruction.stalled
+			&& !core->core_pipeline[IF_ID].halt)
+		{
+			core->hazard = true;
+		}
 	}
 }
 
@@ -212,7 +312,7 @@ void decode(core* core)
 	check_hazards(core);
 	if (core->hazard)
 	{
-		core->next_PC -= 1;		// not sure if need to add old PC if after branch
+		core->next_PC = core->fetch_old_PC;		// not sure if need to add old PC if after branch //2F - change to: core->next_PC -= 1;	
 		core->core_pipeline[IF_ID].new_instruction = core->core_pipeline[IF_ID].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction = core->core_pipeline[ID_EX].current_instruction;
 		core->core_pipeline[ID_EX].new_instruction.stalled = true;
@@ -342,6 +442,7 @@ void memory(core* core, int *main_mem, int core_num)
 		{
 			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
+			core->next_PC = core->fetch_old_PC;
 			return;
 		}
 		else 
@@ -357,6 +458,7 @@ void memory(core* core, int *main_mem, int core_num)
 			// stall core
 			core->core_pipeline[MEM_WB].new_instruction.stalled = true;
 			core->mem_stall = true;
+			core->next_PC = core->fetch_old_PC;
 			return;
 		}
 		else

@@ -85,36 +85,6 @@ void cancel_memory_request(int core_num, int *valid_request) // add support in m
 }
 
 // Bus functions
-
-//void update_bus(core *cores, msi_bus* bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle)
-//{
-//	//check bus availability first
-//	for (int i = 0; i < CORES_NUM; i++)
-//	{
-//		int loc = (i + (*next_RR)) % CORES_NUM;
-//		if (cores[loc].bus_request_status == PENDING_SEND_CODE || cores[loc].bus_request_status == PENDING_WB_SEND_CODE)
-//		{
-//			*bus = cores[loc].bus_request;
-//			*next_RR = (loc + 1) % CORES_NUM;
-//			return;
-//		}
-//	}
-//
-//	// maybe we can add valid_request and memory_request_cycle inside core struct
-//
-//	int mem_to_flush = available_memory_to_flush(cycle, valid_request, memory_request_cycle);
-//	if (mem_to_flush != NO_VALUE_CODE) // If no core want to send, check the main memory
-//	{
-//		*bus = cores[mem_to_flush].bus_request;
-//		valid_request[mem_to_flush] = UNVALID_REQUEST_CODE;
-//	}
-//	else
-//		initialize_bus(&bus);
-//}
-
-
-
-
 void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_request, int *memory_request_cycle, int *main_mem)
 {
 	// first check if bus is busy
@@ -130,7 +100,6 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		bus->cycles_left = FLUSH_CYCLES - 1;
 		bus->bus_cmd = flush;
 		bus->flush_to = bus->bus_origid;
-		bus->bus_origid = main_mem_origid;
 
 		int read_address = cores[bus->bus_origid].core_pipeline[EX_MEM].current_ALU_output;
 		int index = read_address & 0xFF;
@@ -142,6 +111,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 		int main_mem_address = (block_tag << 8) | (block_base_index);
 		address main_mem_address_formatted = { block_base_index, block_tag };
 
+		bus->bus_origid = main_mem_origid;
 		bus->bus_addr = main_mem_address_formatted;
 
 		//write_bustrace(bus, cycle, "bustrace.txt");
@@ -178,6 +148,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *valid_r
 			// update new mesi_state, new tag in tsram, unfreeze core for next cycle, cancel core_bus_request
 			int tsram_index = dsram_index / 4;
 			cores[bus->flush_to].core_cache.tsram[tsram_index].tag = bus->bus_addr.tag;
+			cores[bus->flush_to].core_cache.tsram[tsram_index].valid = true;
 			cores[bus->flush_to].mem_stall = false;
 			
 			int old_mesi = cores[bus->flush_to].core_cache.tsram[tsram_index].MESI_state;

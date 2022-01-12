@@ -76,15 +76,6 @@ int initialize_array_from_file(char* file_name, int* memory_array, int max_array
 // Writes to bustrace file
 int write_bustrace(msi_bus* bus, int cycle, char* bustrace_file)
 {
-	if (cycle == 1)
-	{
-		int ret = remove(bustrace_file);
-		if (ret != SUCCESS_CODE)
-		{
-			printf("ERROR: cannot delete file '%s'\n", bustrace_file);
-			return ERROR_CODE;
-		}
-	}
 	FILE* file_pointer = fopen(bustrace_file, "a");
 
 	if (file_pointer == NULL)

@@ -1,11 +1,2 @@
-﻿  bus_mem.c
-  cache.c
-  core.c
-  main.c
-  parser.c
-  utils.c
-  Generating Code...
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\cache.c(176): warning C4715: 'read_mem': not all control paths return a value
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\cache.c(354): warning C4715: 'core_snoop_bus': not all control paths return a value
-C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\computer architecture project\cache.c(253): warning C4715: 'write_mem': not all control paths return a value
-  computer architecture project.vcxproj -> C:\Users\יובל\Downloads\computer_architecture_project-master\computer_architecture_project-master\Debug\computer architecture project.exe
+﻿  core.c
+  computer architecture project.vcxproj -> C:\Users\avira\source\repos\proj_09.01\computer_architecture_project\Debug\computer architecture project.exe
