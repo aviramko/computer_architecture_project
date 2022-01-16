@@ -46,6 +46,10 @@ int main(int argc, char* argv[])
 		update_bus(cores, &bus, cycle, &next_RR, memory_request_cycle, main_mem);
 
 		cycle++;
+		if (cycle == 35832) 
+		{ 
+			continue;
+		}
 	}
 
 	// print to files

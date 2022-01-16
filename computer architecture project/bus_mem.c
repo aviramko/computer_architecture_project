@@ -194,7 +194,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 		int temp = bus->bus_cmd;
 		bus->bus_cmd = flush;
 
-		int data = cores[bus->bus_origid].core_cache.dsram[cores[bus->bus_origid].bus_request.bus_addr.index];
+		int data = cores[bus->bus_origid].core_cache.dsram[dsram_index];
 		bus->bus_data = data;
 
 		write_bustrace(bus, cycle, "bustrace.txt");
@@ -223,13 +223,13 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 				bus->bus_cmd = bus_rdx;
 			}
 
-			int tsram_index = dsram_index / 4;
-			cores[bus->bus_origid].core_cache.tsram[tsram_index].tag = cores[bus->flush_to].bus_request.bus_addr.tag;
-			cores[bus->bus_origid].core_cache.tsram[tsram_index].valid = true;
-			cores[bus->bus_origid].mem_stall = false;
-
-			initialize_bus(&(cores[bus->bus_origid].bus_request));
-			initialize_bus(bus);
+			//int tsram_index = dsram_index / 4;
+			//cores[bus->bus_origid].core_cache.tsram[tsram_index].tag = cores[bus->flush_to].bus_request.bus_addr.tag;
+			//cores[bus->bus_origid].core_cache.tsram[tsram_index].valid = true;
+			//cores[bus->bus_origid].mem_stall = false;
+			//
+			//initialize_bus(&(cores[bus->bus_origid].bus_request));
+			//initialize_bus(bus);
 		}
 		else
 		{
@@ -285,7 +285,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 		bus->bus_cmd = ((cores[core_num].bus_request.bus_cmd == write_miss_flush_request) ? write_miss_flush : read_miss_flush);
 		bus->bus_addr = new_main_mem_address;
 		bus->bus_data = 0x0;
-
+		return; // block is modified so no need to snoop
 	}
 
 	//initialize bus_shared to zero before snooping other cores
