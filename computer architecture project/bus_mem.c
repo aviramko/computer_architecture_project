@@ -31,6 +31,7 @@ void initialize_bus(msi_bus *bus)
 	bus->bus_cmd = EMPTY_DATA_FIELD;
 	bus->bus_data = EMPTY_DATA_FIELD;
 	bus->bus_origid = EMPTY_DATA_FIELD;
+	bus->flush_to = EMPTY_DATA_FIELD;
 	bus->flush_reason = no_reason;
 }
 
@@ -145,7 +146,7 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 		{
 			// update new mesi_state, new tag in tsram, unfreeze core for next cycle, cancel core_bus_request
 			int tsram_index = dsram_index / 4;
-			cores[bus->flush_to].core_cache.tsram[tsram_index].tag = bus->bus_addr.tag;
+			cores[bus->flush_to].core_cache.tsram[tsram_index].tag = cores[bus->flush_to].bus_request.bus_addr.tag;
 			cores[bus->flush_to].core_cache.tsram[tsram_index].valid = true;
 			cores[bus->flush_to].mem_stall = false;
 			
@@ -221,6 +222,14 @@ void update_bus(core *cores, msi_bus *bus, int cycle, int* next_RR, int *memory_
 			{
 				bus->bus_cmd = bus_rdx;
 			}
+
+			int tsram_index = dsram_index / 4;
+			cores[bus->bus_origid].core_cache.tsram[tsram_index].tag = cores[bus->flush_to].bus_request.bus_addr.tag;
+			cores[bus->bus_origid].core_cache.tsram[tsram_index].valid = true;
+			cores[bus->bus_origid].mem_stall = false;
+
+			initialize_bus(&(cores[bus->bus_origid].bus_request));
+			initialize_bus(bus);
 		}
 		else
 		{

@@ -29,7 +29,7 @@ void initialize_core_regs(core *core)
 }
 
 // Initializing the pipeline for each core
-void initialize_core_pipeline(core *core) 
+void initialize_core_pipeline(core *core)
 {
 	for (int i = 0; i < PIPELINE_BUFFERS_NUM; i++)
 	{
@@ -347,7 +347,7 @@ void execute(core* core)
 
 	if (core->core_pipeline[ID_EX].current_instruction.opcode == halt)
 	{
-		core->core_pipeline[IF_ID].halt = true;	
+		core->core_pipeline[IF_ID].halt = true;
 	}
 
 	bool stalled = core->core_pipeline[ID_EX].current_instruction.stalled;
@@ -378,7 +378,7 @@ void execute(core* core)
 	case (and):
 		ALU_output = rs_value & rt_value;
 		break;
-	case(or):
+	case(or ):
 		ALU_output = rs_value | rt_value;
 		break;
 	case(xor):
@@ -455,7 +455,7 @@ void memory(core* core, int *main_mem, int core_num)
 			core->next_PC = core->fetch_old_PC;
 			return;
 		}
-		else 
+		else
 		{
 			core->core_pipeline[MEM_WB].new_mem_output = read_res; // propogate read result to next stage if access was hit
 		}
@@ -588,7 +588,7 @@ void simulate_clock_cycle(core* core, FILE* trace_file, int *main_mem, int core_
 {
 	if (core->core_halt)
 		return;
-	
+
 	if (core->mem_stall)
 	{
 		write_coretrace(core, trace_file);
